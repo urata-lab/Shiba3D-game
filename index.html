@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>柴犬ダッシュ！</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; touch-action:none; }
+body { background:#000; overflow:hidden; height:100vh; font-family:sans-serif; }
+canvas { display:block; }
+#hud {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:flex-start;
+  padding:14px 18px; pointer-events:none; z-index:20;
+}
+#score-box, #timer-box {
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2);
+  border-radius:12px; padding:6px 16px; color:#fff; font-size:22px; font-weight:bold;
+}
+#timer-box { text-align:right; }
+.hud-label { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:1px; }
+#timer-val { color:#ffdd44; }
+#timer-val.danger { color:#ff4444; animation:blink .4s infinite alternate; }
+@keyframes blink { from{opacity:1}to{opacity:.3} }
+#joystick-area { position:fixed; left:24px; bottom:36px; z-index:20; width:120px; height:120px; }
+#joystick-base {
+  width:120px; height:120px; border-radius:50%;
+  background:rgba(255,255,255,0.12); border:2px solid rgba(255,255,255,0.25); position:absolute;
+}
+#joystick-knob {
+  width:52px; height:52px; border-radius:50%;
+  background:rgba(255,255,255,0.45); border:2px solid rgba(255,255,255,0.7);
+  position:absolute; top:34px; left:34px;
+}
+#btns { position:fixed; right:20px; bottom:36px; z-index:20; display:flex; flex-direction:column; gap:12px; align-items:center; }
+.atk-btn {
+  width:58px; height:58px; border-radius:50%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  cursor:pointer; user-select:none; -webkit-user-select:none;
+  font-size:20px; color:#fff; border:2px solid; transition:transform .08s;
+  -webkit-tap-highlight-color:transparent;
+}
+.atk-btn:active { transform:scale(0.88); }
+#tongue-btn { background:rgba(220,60,100,0.55); border-color:rgba(255,100,140,0.8); }
+#unchi-btn  { background:rgba(120,70,20,0.6);  border-color:rgba(180,120,50,0.8); }
+.atk-label { font-size:8px; margin-top:1px; opacity:.7; }
+#overlay {
+  position:fixed; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:30; color:#fff; text-align:center;
+  background:linear-gradient(160deg,#0a1a0a 0%,#1a2a10 50%,#0a1208 100%);
+}
+/* タイトル画面 */
+#title-screen { width:100%; max-width:380px; padding:24px 20px; position:relative; }
+#title-logo { margin-bottom:36px; }
+#title-dog {
+  font-size:72px; line-height:1;
+  animation:dogBounce 1.8s ease-in-out infinite;
+  display:inline-block;
+}
+@keyframes dogBounce {
+  0%,100%{transform:translateY(0) rotate(-3deg);}
+  50%{transform:translateY(-12px) rotate(3deg);}
+}
+#title-text {
+  font-size:36px; font-weight:bold; margin:10px 0 6px;
+  background:linear-gradient(90deg,#ffdd44,#ffaa22);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  letter-spacing:.06em;
+}
+#title-sub { font-size:13px; color:rgba(255,255,255,0.55); letter-spacing:.04em; }
+#title-btns { display:flex; flex-direction:column; gap:12px; align-items:center; }
+#start-btn {
+  background:linear-gradient(135deg,#c86020,#e88030); border:none; color:#fff;
+  font-size:18px; font-weight:bold; padding:14px 48px; border-radius:30px; cursor:pointer;
+  box-shadow:0 4px 20px rgba(200,80,20,0.45); letter-spacing:.06em;
+  transition:transform .1s;
+}
+#start-btn:active { transform:scale(0.95); }
+#rule-btn {
+  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25);
+  color:#fff; font-size:15px; padding:10px 36px; border-radius:24px; cursor:pointer;
+  letter-spacing:.04em; transition:background .15s;
+}
+#rule-btn:active { background:rgba(255,255,255,0.2); }
+#version-tag {
+  position:absolute; bottom:16px; right:20px;
+  font-size:10px; color:rgba(255,255,255,0.28); letter-spacing:.06em;
+}
+/* ルール画面 */
+#rule-screen { width:100%; max-width:340px; padding:20px; }
+#rule-title { font-size:22px; margin-bottom:20px; color:#ffdd44; }
+#rule-content { display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
+.rule-item {
+  display:flex; justify-content:space-between; align-items:center;
+  background:rgba(255,255,255,0.07); border-radius:10px; padding:10px 16px;
+  font-size:14px;
+}
+.rule-item span { color:#ffdd44; font-size:12px; text-align:right; }
+#rule-back-btn {
+  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);
+  color:#fff; font-size:14px; padding:10px 28px; border-radius:20px; cursor:pointer;
+}
+/* リザルト画面 */
+.final-score { font-size:52px; font-weight:bold; color:#ffdd44; margin:10px 0; }
+/* ズームトグルアイコン */
+#zoom-toggle {
+  position:fixed; right:14px; top:80px;
+  width:36px; height:36px; border-radius:50%;
+  background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.22);
+  color:#fff; font-size:17px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; z-index:21; backdrop-filter:blur(8px);
+  transition:background .15s, border-color .15s;
+  user-select:none; -webkit-user-select:none;
+}
+#zoom-toggle.active {
+  background:rgba(255,255,255,0.2);
+  border-color:rgba(255,255,255,0.5);
+}
+/* ズームバー */
+#zoom-bar {
+  position:fixed; right:6px; top:126px; bottom:200px;
+  width:28px; display:flex; align-items:center; justify-content:center;
+  z-index:20;
+  opacity:0; pointer-events:none; transform:translateX(20px);
+  transition:opacity .22s ease, transform .22s ease;
+}
+#zoom-bar.visible {
+  opacity:1; pointer-events:auto; transform:translateX(0);
+}
+#zoom-track {
+  position:relative; width:4px; height:100%;
+  border-radius:2px; background:rgba(255,255,255,0.2); cursor:pointer;
+}
+#zoom-fill {
+  position:absolute; bottom:0; left:0; right:0;
+  border-radius:2px; background:rgba(255,255,255,0.75); pointer-events:none;
+}
+#zoom-thumb {
+  position:absolute; left:50%; transform:translateX(-50%);
+  width:16px; height:16px; border-radius:50%;
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.5);
+  cursor:grab; transition:box-shadow .15s;
+}
+#zoom-thumb:active { cursor:grabbing; box-shadow:0 0 0 5px rgba(255,255,255,0.35), 0 2px 8px rgba(0,0,0,0.5); }
+#cam-btn {
+  position:fixed; left:14px; top:80px; z-index:21;
+  background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.22);
+  color:#fff; font-size:12px; font-weight:bold;
+  padding:7px 12px; border-radius:20px; cursor:pointer;
+  backdrop-filter:blur(8px); letter-spacing:.04em;
+  transition:background .15s, border-color .15s;
+  user-select:none; -webkit-user-select:none;
+}
+#cam-btn.tps {
+  background:rgba(200,120,30,0.55);
+  border-color:#c87830;
+}
+/* 突進ボタン */
+#dash-btn-wrap {
+  position:relative;
+  width:58px; height:58px;
+  display:flex; align-items:center; justify-content:center;
+}
+#dash-gauge {
+  position:absolute; top:-3px; left:-3px; width:64px; height:64px;
+  pointer-events:none; z-index:2;
+}
+#dash-btn {
+  position:relative; z-index:1;
+}
+#dash-btn.cooldown {
+  background:rgba(80,80,80,0.55) !important; border-color:rgba(120,120,120,0.5) !important;
+  color:rgba(255,255,255,0.4) !important;
+}
+#combo-popup {
+  position:fixed; top:28%; left:50%; transform:translateX(-50%);
+  color:#ffdd44; font-size:26px; font-weight:bold;
+  pointer-events:none; z-index:25; opacity:0; text-shadow:0 0 12px rgba(255,180,0,.8);
+}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="score-box"><div class="hud-label">スコア</div><div id="score-val">0</div></div>
+  <div id="timer-box"><div class="hud-label">残り時間</div><div id="timer-val">60</div></div>
+</div>
+<button id="cam-btn">📷 フリー</button>
+<div id="joystick-area">
+  <div id="joystick-base"></div>
+  <div id="joystick-knob"></div>
+</div>
+<div id="btns">
+  <div class="atk-btn" id="tongue-btn">👅<span class="atk-label">舌攻撃</span></div>
+  <div class="atk-btn" id="unchi-btn">💩<span class="atk-label">うんち</span></div>
+  <!-- 突進ボタン（ゲージCanvas付き）うんちの左＝縦並びなので上に -->
+  <div id="dash-btn-wrap">
+    <canvas id="dash-gauge" width="58" height="58"></canvas>
+    <div class="atk-btn" id="dash-btn">💨<span class="atk-label" id="dash-label">突進</span></div>
+  </div>
+</div>
+  <div class="atk-btn" id="unchi-btn">💩<span class="atk-label">うんち</span></div>
+</div>
+
+<!-- ズームアイコン（トグル） -->
+<div id="zoom-toggle">🔍</div>
+<!-- ズームバー（初期非表示） -->
+<div id="zoom-bar">
+  <div id="zoom-track">
+    <div id="zoom-fill"></div>
+    <div id="zoom-thumb"></div>
+  </div>
+</div>
+<div id="combo-popup"></div>
+<div id="overlay">
+  <!-- タイトル画面 -->
+  <div id="title-screen">
+    <div id="title-logo">
+      <div id="title-dog">🐕</div>
+      <h1 id="title-text">柴犬ダッシュ！</h1>
+      <div id="title-sub">原っぱを駆けまわってピンを倒せ！</div>
+    </div>
+    <div id="title-btns">
+      <button id="start-btn">🐾 スタート！</button>
+      <button id="rule-btn">📋 ルール</button>
+    </div>
+    <div id="version-tag">Beta 0.1.0</div>
+  </div>
+  <!-- ルール画面 -->
+  <div id="rule-screen" style="display:none;">
+    <h2 id="rule-title">📋 ルール</h2>
+    <div id="rule-content">
+      <div class="rule-item">🕐 制限時間<span>60秒</span></div>
+      <div class="rule-item">💥 体当たり<span>+1点</span></div>
+      <div class="rule-item">👅 舌攻撃<span>顔の前方に発射</span></div>
+      <div class="rule-item">💩 うんち<span>おしりから放物線</span></div>
+      <div class="rule-item">💨 突進<span>1秒間超高速／5秒CD</span></div>
+      <div class="rule-item">📷 カメラ<span>フリー／TPS切替</span></div>
+    </div>
+    <button id="rule-back-btn">← もどる</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════
+   座標系の定義（最重要）
+   ───────────────────────────────────────────────────────────
+   ・柴犬モデルは「顔が +Z 方向」を向いて作られている
+   ・SB.facing = 0 のとき、柴犬は +Z を向く
+   ・shiba.root.rotation.y = SB.facing （+PIなどの補正は一切しない）
+   ・前方ベクトル forward = (sin(facing), 0, cos(facing))
+     - facing=0      → (0,0,1)  = +Z   ✓モデルの顔の向きと一致
+     - facing=PI/2   → (1,0,0)  = +X
+   ・後方ベクトル backward = -forward
+   ═══════════════════════════════════════════════════════════ */
+
+function forwardVec(facing){ return new THREE.Vector3(Math.sin(facing),0,Math.cos(facing)); }
+
+// ══ Renderer ══════════════════════════════════════
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x7ec898);
+scene.fog=new THREE.Fog(0x7ec898,30,60);
+
+const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,0.1,200);
+camera.position.set(0,5,-8);
+
+// ══ Lights ════════════════════════════════════════
+scene.add(new THREE.AmbientLight(0xfff8e8,0.7));
+const sun=new THREE.DirectionalLight(0xfff4d0,1.4);
+sun.position.set(10,20,10); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=1; sun.shadow.camera.far=80;
+sun.shadow.camera.left=-30; sun.shadow.camera.right=30;
+sun.shadow.camera.top=30; sun.shadow.camera.bottom=-30;
+scene.add(sun);
+const fill=new THREE.DirectionalLight(0xb0d0ff,0.35);
+fill.position.set(-8,6,-4); scene.add(fill);
+
+// ══ Materials ═════════════════════════════════════
+const M={
+  red   :new THREE.MeshStandardMaterial({color:0xBF5E1A,roughness:0.82}),
+  cream :new THREE.MeshStandardMaterial({color:0xF0E3C0,roughness:0.85}),
+  nose  :new THREE.MeshStandardMaterial({color:0x140c0c,roughness:0.35}),
+  eye   :new THREE.MeshStandardMaterial({color:0x090508,roughness:0.15,metalness:0.4}),
+  shine :new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:0.9}),
+  tongue:new THREE.MeshStandardMaterial({color:0xE04868,roughness:0.75}),
+  inear :new THREE.MeshStandardMaterial({color:0xCC7070,roughness:0.9}),
+  grass :new THREE.MeshStandardMaterial({color:0x52a058,roughness:1.0}),
+  pin   :new THREE.MeshStandardMaterial({color:0xfafafa,roughness:0.6}),
+  pinRed:new THREE.MeshStandardMaterial({color:0xff2222,roughness:0.6}),
+  proj  :new THREE.MeshStandardMaterial({color:0xE04868,roughness:0.7}),
+  unchi :new THREE.MeshStandardMaterial({color:0x6b3a10,roughness:0.9}),
+};
+
+// ══ Helpers ═══════════════════════════════════════
+function sph(sx,sy,sz,mat){const m=new THREE.Mesh(new THREE.SphereGeometry(1,20,16),mat);m.scale.set(sx,sy,sz);m.castShadow=true;return m;}
+function cyl(rt,rb,h,mat,seg=12){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.castShadow=true;return m;}
+function cone(r,h,mat,seg=8){const m=new THREE.Mesh(new THREE.ConeGeometry(r,h,seg),mat);m.castShadow=true;return m;}
+
+// ══ Build Shiba（顔は +Z 向き）════════════════════
+function buildShiba(){
+  const root=new THREE.Group();
+  const BODY_Y=0.75;
+
+  const bodyG=new THREE.Group();
+  bodyG.position.set(0,BODY_Y,0); root.add(bodyG);
+  bodyG.add(sph(0.55,0.44,0.70,M.red));
+  const belly=sph(0.46,0.28,0.50,M.cream); belly.position.set(0,-0.20,0.08); bodyG.add(belly);
+  const chest=sph(0.34,0.30,0.28,M.cream); chest.position.set(0,0.05,0.50); bodyG.add(chest);
+
+  const neckG=new THREE.Group();
+  neckG.position.set(0,BODY_Y+0.28,0.30); neckG.rotation.x=-0.30;
+  root.add(neckG); neckG.add(cyl(0.20,0.24,0.36,M.red));
+
+  // head (+Z前方)
+  const headG=new THREE.Group();
+  headG.position.set(0,BODY_Y+0.68,0.50); root.add(headG);
+  headG.add(sph(0.40,0.38,0.40,M.red));
+  [-1,1].forEach(s=>{const c=sph(0.16,0.14,0.12,M.cream);c.position.set(s*0.20,-0.06,0.29);headG.add(c);});
+  const muzzle=sph(0.20,0.16,0.20,M.cream); muzzle.position.set(0,-0.13,0.34); headG.add(muzzle);
+  const noseMesh=sph(0.080,0.058,0.068,M.nose); noseMesh.position.set(0,-0.07,0.51); headG.add(noseMesh);
+  [-1,1].forEach(s=>{
+    const e=sph(0.068,0.056,0.050,M.eye); e.position.set(s*0.165,0.10,0.35); headG.add(e);
+    const sh=sph(0.020,0.020,0.016,M.shine); sh.position.set(s*0.165+s*0.016,0.116,0.396); headG.add(sh);
+  });
+  [-1,1].forEach(s=>{
+    const eg=new THREE.Group(); eg.position.set(s*0.28,0.28,-0.02); eg.rotation.set(-0.12,s*0.16,s*0.08);
+    const eo=cone(0.14,0.36,M.red,8); eo.position.y=0.18; eg.add(eo);
+    const ei=cone(0.085,0.24,M.inear,8); ei.position.set(0,0.19,0.04); eg.add(ei);
+    headG.add(eg);
+  });
+  const tongueDisp=new THREE.Group(); tongueDisp.visible=false; headG.add(tongueDisp);
+  const td=sph(0.11,0.046,0.10,M.tongue); td.position.set(0,-0.25,0.43); tongueDisp.add(td);
+
+  // tail (-Z後方)
+  const tailG=new THREE.Group(); tailG.position.set(0,BODY_Y+0.22,-0.60); root.add(tailG);
+  const tb=cyl(0.09,0.12,0.28,M.red); tb.position.set(0,0.14,0); tb.rotation.x=-0.65; tailG.add(tb);
+  const tm=cyl(0.075,0.09,0.24,M.red); tm.position.set(0,0.36,-0.13); tm.rotation.x=-1.55; tailG.add(tm);
+  const tt=sph(0.095,0.095,0.11,M.cream); tt.position.set(0,0.48,-0.08); tailG.add(tt);
+
+  // ── 足（短い版: 上腿0.22, 下腿0.20）──
+  const LEG_TOP_Y=BODY_Y-0.42;
+  function makeLeg(){
+    const g=new THREE.Group();
+    const up=cyl(0.10,0.09,0.22,M.red); up.position.y=-0.11; g.add(up);
+    const lo=cyl(0.082,0.072,0.20,M.red); lo.position.y=-0.33; g.add(lo);
+    const ankle=sph(0.092,0.072,0.095,M.red); ankle.position.set(0,-0.44,0.02); g.add(ankle);
+    const pw=sph(0.10,0.055,0.12,M.cream); pw.position.set(0,-0.50,0.04); g.add(pw);
+    [-0.04,0,0.04].forEach(ox=>{
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(0.013,0.04,5),M.nose);
+      cl.rotation.x=Math.PI; cl.position.set(ox,-0.55,0.07); g.add(cl);
+    });
+    return g;
+  }
+  const FL=makeLeg(); FL.position.set(-0.23,LEG_TOP_Y, 0.28); root.add(FL);
+  const FR=makeLeg(); FR.position.set( 0.23,LEG_TOP_Y, 0.28); root.add(FR);
+  const BL=makeLeg(); BL.position.set(-0.25,LEG_TOP_Y,-0.22); root.add(BL);
+  const BR=makeLeg(); BR.position.set( 0.25,LEG_TOP_Y,-0.22); root.add(BR);
+
+  // ── おしりの穴（＊マーク）──
+  // 胴体(0,BODY_Y,0)半径Z=0.70の真後ろ表面+0.02浮かせ（検証済み: 内積1.0, 埋没0/8）
+  const bungG=new THREE.Group();
+  bungG.position.set(0, BODY_Y, -0.72);
+  bungG.rotation.x=-Math.PI;
+  root.add(bungG);
+  const starMat2=new THREE.MeshStandardMaterial({color:0x1e0a03,roughness:0.5});
+  const holeMat2=new THREE.MeshStandardMaterial({color:0x080200,roughness:0.35});
+  for(let i=0;i<8;i++){
+    const angle=(i/8)*Math.PI*2;
+    const geo=new THREE.CylinderGeometry(0.005,0.014,0.068,5);
+    const line=new THREE.Mesh(geo,starMat2);
+    line.rotation.z=angle;
+    line.position.set(Math.sin(angle)*0.038,Math.cos(angle)*0.038,0.002);
+    bungG.add(line);
+  }
+  const hole2=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),holeMat2);
+  hole2.scale.set(0.026,0.026,0.012); bungG.add(hole2);
+
+  // 足先がy=0に揃うよう調整
+  // 足先y = LEG_TOP_Y - 0.55 = (BODY_Y-0.42)-0.55 = 0.75-0.97 = -0.22
+  root.position.y=0.22;
+  return {root,tailG,tongueDisp,headG,FL,FR,BL,BR,bodyG};
+}
+
+// ══ Build Enemy（マイクラ風・1.5倍）══════════════
+function buildPin(){
+  const g=new THREE.Group();
+  const S=1.5;
+
+  function eb(w,h,d,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.castShadow=true;m.receiveShadow=true;return m;}
+  function es(r,mat){const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),mat);m.castShadow=true;return m;}
+
+  const mHead =new THREE.MeshStandardMaterial({color:0xF5CBA7,roughness:0.75});
+  const mBody =new THREE.MeshStandardMaterial({color:0x3a5fc8,roughness:0.85});
+  const mLeg  =new THREE.MeshStandardMaterial({color:0x2a2a7a,roughness:0.85});
+  const mShoe =new THREE.MeshStandardMaterial({color:0x1a1008,roughness:0.9});
+  const mJoint=new THREE.MeshStandardMaterial({color:0xF5CBA7,roughness:0.75});
+
+  // 頭（丸い球）
+  const headG=new THREE.Group(); headG.position.set(0,1.30*S,0); g.add(headG);
+  headG.add(es(0.24*S,mHead));
+
+  // 首
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.07*S,0.07*S,0.10*S,14),mJoint);
+  neck.position.set(0,1.12*S,0); g.add(neck);
+
+  // 胴体
+  const body=eb(0.46*S,0.52*S,0.26*S,mBody); body.position.set(0,0.82*S,0); g.add(body);
+
+  // 左腕
+  const aLG=new THREE.Group(); aLG.position.set(-0.29*S,1.04*S,0); g.add(aLG);
+  const aL=eb(0.18*S,0.46*S,0.18*S,mBody); aL.position.y=-0.23*S; aLG.add(aL);
+  const wL=es(0.09*S,mJoint); wL.position.y=-0.50*S; aLG.add(wL);
+  g.userData.armL=aLG;
+
+  // 右腕
+  const aRG=new THREE.Group(); aRG.position.set(0.29*S,1.04*S,0); g.add(aRG);
+  const aR=eb(0.18*S,0.46*S,0.18*S,mBody); aR.position.y=-0.23*S; aRG.add(aR);
+  const wR=es(0.09*S,mJoint); wR.position.y=-0.50*S; aRG.add(wR);
+  g.userData.armR=aRG;
+
+  // 左脚
+  const lLG=new THREE.Group(); lLG.position.set(-0.13*S,0.54*S,0); g.add(lLG);
+  const lL=eb(0.20*S,0.46*S,0.20*S,mLeg); lL.position.y=-0.23*S; lLG.add(lL);
+  const sL=eb(0.20*S,0.10*S,0.26*S,mShoe); sL.position.set(0,-0.50*S,0.03*S); lLG.add(sL);
+  g.userData.legL=lLG;
+
+  // 右脚
+  const lRG=new THREE.Group(); lRG.position.set(0.13*S,0.54*S,0); g.add(lRG);
+  const lR=eb(0.20*S,0.46*S,0.20*S,mLeg); lR.position.y=-0.23*S; lRG.add(lR);
+  const sR=eb(0.20*S,0.10*S,0.26*S,mShoe); sR.position.set(0,-0.50*S,0.03*S); lRG.add(sR);
+  g.userData.legR=lRG;
+
+  g.position.y=0.09*S;
+  return g;
+}
+
+// ══ Field ═════════════════════════════════════════
+const FIELD=30;
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(FIELD*2,FIELD*2,30,30),M.grass);
+ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+for(let i=0;i<80;i++){
+  const g=new THREE.Mesh(
+    new THREE.ConeGeometry(0.12+Math.random()*0.1,0.4+Math.random()*0.4,5),
+    new THREE.MeshStandardMaterial({color:0x429048+Math.floor(Math.random()*0x0f0f0f),roughness:1})
+  );
+  const a=Math.random()*Math.PI*2,r=8+Math.random()*18;
+  g.position.set(Math.cos(a)*r,0.15,Math.sin(a)*r); scene.add(g);
+}
+
+// ══ State ═════════════════════════════════════════
+let gameState='menu';
+let score=0,timeLeft=60,timerInterval=null;
+
+const shiba=buildShiba();
+scene.add(shiba.root);
+
+const SB={
+  pos:new THREE.Vector3(0,0,0),
+  vel:new THREE.Vector3(0,0,0),
+  facing:0,
+  speed:6.5,
+  legPhase:0,
+};
+
+const pins=[];
+const MAX_PINS=16;
+
+function spawnPin(){
+  if(pins.length>=MAX_PINS) return;
+  const a=Math.random()*Math.PI*2, r=5+Math.random()*(FIELD-6);
+  const pin=buildPin();
+  pin.position.set(Math.cos(a)*r,0,Math.sin(a)*r);
+  pin.userData={alive:true, fallVel:0, fallRot:0, blowX:0, blowZ:0, spin:0};
+  scene.add(pin); pins.push(pin);
+}
+
+const projectiles=[];
+
+// ── 舌：顔の前(+forward)に発射 ───────────────────
+function fireTongue(){
+  if(gameState!=='playing') return;
+  const fwd=forwardVec(SB.facing);
+  // 発射位置 = 柴犬の中心 + 前方0.9 + 高さ1.4（頭の位置）
+  const pos=SB.pos.clone().add(fwd.clone().multiplyScalar(0.9));
+  pos.y=1.35;
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6),M.proj.clone());
+  mesh.position.copy(pos);
+  mesh.castShadow=true;
+  scene.add(mesh);
+  projectiles.push({mesh, vel:fwd.clone().multiplyScalar(16), life:1.4, gravity:false});
+  // 舌アニメ
+  shiba.tongueDisp.visible=true;
+  setTimeout(()=>shiba.tongueDisp.visible=false,300);
+}
+
+// ── うんち：おしり(-forward)から発射 ─────────────
+function fireUnchi(){
+  if(gameState!=='playing') return;
+  const back=forwardVec(SB.facing).multiplyScalar(-1);
+  const pos=SB.pos.clone().add(back.clone().multiplyScalar(0.7));
+  pos.y=0.7;
+  const group=new THREE.Group();
+  group.position.copy(pos);
+  [0,0.20,0.34].forEach((y,i)=>{
+    const r=0.17-i*0.04;
+    const s=new THREE.Mesh(new THREE.SphereGeometry(r,8,6),M.unchi);
+    s.position.y=y; s.castShadow=true; group.add(s);
+  });
+  // 警告リング（爆発前に点滅）
+  const ringGeo=new THREE.RingGeometry(0.3,0.38,24);
+  const ringMat=new THREE.MeshBasicMaterial({color:0xff4400,side:THREE.DoubleSide,transparent:true,opacity:0.8});
+  const ring=new THREE.Mesh(ringGeo,ringMat);
+  ring.rotation.x=-Math.PI/2; ring.position.y=0.05;
+  group.add(ring);
+  scene.add(group);
+  const vel=back.clone().multiplyScalar(9).add(new THREE.Vector3(0,3.5,0));
+  // explodeTimer: 2秒後に爆発
+  projectiles.push({mesh:group, vel, life:6.0, gravity:true, explodeTimer:2.0, ring, exploded:false});
+}
+
+function explodeUnchi(proj){
+  if(proj.exploded) return;
+  proj.exploded=true;
+  const ex=proj.mesh.position;
+  // 爆発エフェクト（オレンジ球を一瞬表示）
+  const boom=new THREE.Mesh(
+    new THREE.SphereGeometry(1.8,16,12),
+    new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.7})
+  );
+  boom.position.copy(ex); scene.add(boom);
+  setTimeout(()=>scene.remove(boom),200);
+  // 爆発範囲内の敵を吹っ飛ばす（半径2.5）
+  const BLAST_R=2.5;
+  pins.forEach(pin=>{
+    if(!pin.userData.alive) return;
+    const dx=pin.position.x-ex.x;
+    const dz=pin.position.z-ex.z;
+    if(Math.sqrt(dx*dx+dz*dz)<BLAST_R){
+      knockPin(pin,ex.x,ex.z,200);
+    }
+  });
+  // 発射物を削除
+  scene.remove(proj.mesh);
+  const idx=projectiles.indexOf(proj);
+  if(idx>=0) projectiles.splice(idx,1);
+}
+
+// ── ピンを倒す＋吹っ飛ばす ───────────────────────
+function knockPin(pin, fromX, fromZ, power){
+  if(!pin.userData.alive) return false;
+  pin.userData.alive=false;
+  score++; updateHUD(); showCombo('+1 🐾');
+
+  let dx=pin.position.x-fromX;
+  let dz=pin.position.z-fromZ;
+  const len=Math.sqrt(dx*dx+dz*dz)||1;
+  dx/=len; dz/=len;
+  pin.userData.blowX=dx*power;
+  pin.userData.blowZ=dz*power;
+  pin.userData.spin=(Math.random()-0.5)*12;
+  pin.userData.fallVel=0;
+  pin.userData.fallRot=0;
+
+  setTimeout(()=>{
+    const a=Math.random()*Math.PI*2, r=5+Math.random()*(FIELD-6);
+    pin.position.set(Math.cos(a)*r,0,Math.sin(a)*r);
+    pin.rotation.set(0,Math.random()*Math.PI*2,0);
+    pin.userData.alive=true;
+    pin.userData.blowX=0; pin.userData.blowZ=0; pin.userData.spin=0;
+    pin.userData.fallRot=0; pin.userData.fallVel=0;
+    if(pins.length<MAX_PINS && Math.random()<0.5) spawnPin();
+  },3000);
+  return true;
+}
+
+// ══ Joystick ══════════════════════════════════════
+const joyState={dx:0,dy:0,id:null};
+const joyArea=document.getElementById('joystick-area');
+const joyKnob=document.getElementById('joystick-knob');
+const JR=60;
+function joyCenter(){const r=joyArea.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};}
+function updateJoy(cx,cy){
+  const c=joyCenter();
+  let dx=cx-c.x,dy=cy-c.y;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  if(len>JR){dx=dx/len*JR;dy=dy/len*JR;}
+  joyState.dx=dx/JR; joyState.dy=dy/JR;
+  joyKnob.style.transform=`translate(${dx}px,${dy}px)`;
+}
+joyArea.addEventListener('touchstart',e=>{
+  const t=e.changedTouches[0]; joyState.id=t.identifier; updateJoy(t.clientX,t.clientY);
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(zDrag) return; // ズームドラッグ中はジョイスティック無視
+  for(const t of e.changedTouches) if(t.identifier===joyState.id) updateJoy(t.clientX,t.clientY);
+},{passive:true});
+window.addEventListener('touchend',e=>{
+  for(const t of e.changedTouches) if(t.identifier===joyState.id){
+    joyState.dx=0; joyState.dy=0; joyState.id=null;
+    joyKnob.style.transform='translate(0,0)';
+  }
+},{passive:true});
+
+// ══ Camera ════════════════════════════════════════
+let camYaw=0, camPitch=0.32, camDist=7.5;
+let tpsMode=false;
+let camTouchId=null, camPX=0, camPY=0, camDrag=false;
+// TPSモード時の一時視点オフセット
+let tpsYawOffset=0, tpsPitchOffset=0;  // 指を離すと0に戻る
+let tpsDragging=false;
+
+renderer.domElement.addEventListener('mousedown',e=>{
+  if(tpsMode){ tpsDragging=true; camPX=e.clientX; camPY=e.clientY; }
+  else { camDrag=true; camPX=e.clientX; camPY=e.clientY; }
+});
+window.addEventListener('mouseup',()=>{
+  camDrag=false;
+  tpsDragging=false; // 離したらオフセットを自然に戻す（アニメで）
+});
+window.addEventListener('mousemove',e=>{
+  if(camDrag && !tpsMode){
+    camYaw+=(e.clientX-camPX)*0.012; camPitch+=(e.clientY-camPY)*0.008;
+    camPitch=Math.max(0.18,Math.min(1.2,camPitch));
+    camPX=e.clientX; camPY=e.clientY;
+  }
+  if(tpsDragging && tpsMode){
+    tpsYawOffset+=(e.clientX-camPX)*0.012;
+    tpsPitchOffset+=(e.clientY-camPY)*0.008;
+    tpsYawOffset=Math.max(-Math.PI*0.6,Math.min(Math.PI*0.6,tpsYawOffset));
+    tpsPitchOffset=Math.max(-0.4,Math.min(0.5,tpsPitchOffset));
+    camPX=e.clientX; camPY=e.clientY;
+  }
+});
+renderer.domElement.addEventListener('touchstart',e=>{
+  for(const t of e.changedTouches) if(t.clientX>innerWidth*0.42 && camTouchId===null){
+    camTouchId=t.identifier; camPX=t.clientX; camPY=t.clientY;
+    if(tpsMode) tpsDragging=true;
+  }
+},{passive:true});
+window.addEventListener('touchend',e=>{
+  for(const t of e.changedTouches) if(t.identifier===camTouchId){
+    camTouchId=null;
+    tpsDragging=false; // 離したらオフセットを自然に戻す
+  }
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(zDrag) return;
+  for(const t of e.changedTouches) if(t.identifier===camTouchId){
+    if(tpsMode){
+      // TPSモード: 一時オフセットを更新
+      tpsYawOffset+=(t.clientX-camPX)*0.012;
+      tpsPitchOffset+=(t.clientY-camPY)*0.008;
+      tpsYawOffset=Math.max(-Math.PI*0.6,Math.min(Math.PI*0.6,tpsYawOffset));
+      tpsPitchOffset=Math.max(-0.4,Math.min(0.5,tpsPitchOffset));
+    } else {
+      camYaw+=(t.clientX-camPX)*0.012; camPitch+=(t.clientY-camPY)*0.008;
+      camPitch=Math.max(0.18,Math.min(1.2,camPitch));
+    }
+    camPX=t.clientX; camPY=t.clientY;
+  }
+},{passive:true});
+renderer.domElement.addEventListener('wheel',e=>{
+  camDist=Math.max(3,Math.min(14,camDist+e.deltaY*0.006));
+  if(typeof updateZoomUI==='function')updateZoomUI();
+},{passive:true});
+
+// ズームトグル
+const zToggle=document.getElementById('zoom-toggle');
+const zBar=document.getElementById('zoom-bar');
+let zVisible=false;
+function toggleZoom(){
+  zVisible=!zVisible;
+  zBar.classList.toggle('visible',zVisible);
+  zToggle.classList.toggle('active',zVisible);
+  zToggle.textContent=zVisible?'✕':'🔍';
+  if(zVisible) setTimeout(updateZoomUI,30);
+}
+zToggle.addEventListener('click', toggleZoom);
+// touchstartでも反応させる（他のタッチ操作中でも独立して動く）
+zToggle.addEventListener('touchstart', e=>{
+  e.stopPropagation(); // ジョイスティック・カメラに奪われない
+  e.preventDefault();
+  toggleZoom();
+},{passive:false});
+
+// ズームスライダー
+const ZOOM_MIN=3, ZOOM_MAX=14;
+const zTrack=document.getElementById('zoom-track');
+const zThumb=document.getElementById('zoom-thumb');
+const zFill =document.getElementById('zoom-fill');
+
+function updateZoomUI(){
+  const trackH=zTrack.clientHeight||200;
+  const thumbH=16;
+  const usable=trackH-thumbH;
+  const ratio=(camDist-ZOOM_MIN)/(ZOOM_MAX-ZOOM_MIN);
+  const topPx=ratio*usable;
+  zThumb.style.top=topPx+'px';
+  zFill.style.top=(topPx+thumbH/2)+'px';
+  zFill.style.bottom='0';
+}
+
+let zDrag=false, zY0=0, zD0=0, zTouchId=null;
+
+function zMoveDrag(clientY){
+  const trackH=zTrack.clientHeight||200;
+  const dy=clientY-zY0;
+  camDist=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,zD0+dy/trackH*(ZOOM_MAX-ZOOM_MIN)));
+  updateZoomUI();
+}
+
+// touchstart: identifier記録
+zTrack.addEventListener('touchstart',e=>{
+  e.stopPropagation(); e.preventDefault();
+  const t=e.changedTouches[0];
+  zTouchId=t.identifier; zDrag=true; zY0=t.clientY; zD0=camDist;
+},{passive:false});
+
+// touchmove: windowに登録するがidentifierで自分の指だけ処理
+// passive:false必須(preventDefault用)
+window.addEventListener('touchmove',e=>{
+  if(!zDrag || zTouchId===null) return;
+  for(const t of e.changedTouches){
+    if(t.identifier===zTouchId){
+      e.stopPropagation(); e.preventDefault();
+      zMoveDrag(t.clientY);
+      break;
+    }
+  }
+},{passive:false, capture:true}); // capture:trueで最優先
+
+window.addEventListener('touchend',e=>{
+  for(const t of e.changedTouches){
+    if(t.identifier===zTouchId){ zDrag=false; zTouchId=null; }
+  }
+},{passive:true});
+window.addEventListener('touchcancel',e=>{zDrag=false;zTouchId=null;},{passive:true});
+
+// マウス操作
+zTrack.addEventListener('mousedown',e=>{e.stopPropagation();zDrag=true;zY0=e.clientY;zD0=camDist;});
+window.addEventListener('mousemove',e=>{if(zDrag)zMoveDrag(e.clientY);});
+window.addEventListener('mouseup',()=>zDrag=false);
+
+setTimeout(updateZoomUI,100);
+window.addEventListener('mouseup',()=>zDragging=false);
+
+// ピンチズーム（スマホ2本指）
+let pinchDist0=null;
+window.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    pinchDist0=Math.sqrt(dx*dx+dy*dy);
+  }
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(e.touches.length===2 && pinchDist0!==null){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    camDist=Math.max(3,Math.min(14,camDist-(d-pinchDist0)*0.018));
+    pinchDist0=d;
+  }
+},{passive:true});
+window.addEventListener('touchend',e=>{
+  if(e.touches.length<2) pinchDist0=null;
+},{passive:true});
+
+const keys={};
+window.addEventListener('keydown',e=>keys[e.key]=true);
+window.addEventListener('keyup',  e=>keys[e.key]=false);
+
+document.getElementById('tongue-btn').addEventListener('touchstart',e=>{e.preventDefault();fireTongue();},{passive:false});
+document.getElementById('tongue-btn').addEventListener('click',fireTongue);
+document.getElementById('unchi-btn').addEventListener('touchstart',e=>{e.preventDefault();fireUnchi();},{passive:false});
+document.getElementById('unchi-btn').addEventListener('click',fireUnchi);
+
+// ══ HUD ═══════════════════════════════════════════
+function updateHUD(){
+  document.getElementById('score-val').textContent=score;
+  const tv=document.getElementById('timer-val');
+  tv.textContent=timeLeft; tv.className=timeLeft<=10?'danger':'';
+}
+function showCombo(txt){
+  const el=document.getElementById('combo-popup');
+  el.textContent=txt; el.style.transition='none'; el.style.opacity='1';
+  el.style.transform='translateX(-50%) scale(1.3)';
+  setTimeout(()=>{
+    el.style.transition='opacity .5s,transform .5s';
+    el.style.opacity='0'; el.style.transform='translateX(-50%) scale(0.9)';
+  },400);
+}
+
+// ══ Start / End ═══════════════════════════════════
+// カメラモード切替
+const camBtn=document.getElementById('cam-btn');
+camBtn.addEventListener('click',()=>{
+  tpsMode=!tpsMode;
+  camBtn.textContent=tpsMode?'📷 TPS':'📷 フリー';
+  camBtn.classList.toggle('tps',tpsMode);
+});
+camBtn.addEventListener('touchstart',e=>{
+  e.stopPropagation(); e.preventDefault();
+  tpsMode=!tpsMode;
+  camBtn.textContent=tpsMode?'📷 TPS':'📷 フリー';
+  camBtn.classList.toggle('tps',tpsMode);
+},{passive:false});
+
+// ── 突進ボタン ──
+const DASH_COOLDOWN = 5.0; // 5秒
+let dashCooldownLeft = 0;
+let dashActive = false;
+let dashVelX = 0, dashVelZ = 0;
+const DASH_SPEED = 220;
+const DASH_DURATION = 1.0;  // 突進持続時間(秒)
+let dashTimer = 0;
+
+const dashBtn  = document.getElementById('dash-btn');
+const dashLabel= document.getElementById('dash-label');
+const dashCanvas=document.getElementById('dash-gauge');
+const dashCtx  = dashCanvas.getContext('2d');
+
+function drawDashGauge(ratio){
+  const w=64, h=64, cx=32, cy=32, r=28, lw=4;
+  dashCtx.clearRect(0,0,64,64);
+  // 背景トラック
+  dashCtx.beginPath();
+  dashCtx.arc(cx,cy,r,0,Math.PI*2);
+  dashCtx.strokeStyle='rgba(255,255,255,0.08)';
+  dashCtx.lineWidth=lw;
+  dashCtx.stroke();
+  if(ratio<=0) return;
+  // ゲージ（緑・上から時計回り）
+  dashCtx.beginPath();
+  dashCtx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*ratio);
+  dashCtx.strokeStyle=ratio>=1?'rgba(80,240,120,0.95)':'rgba(80,200,100,0.75)';
+  dashCtx.lineWidth=lw;
+  dashCtx.lineCap='round';
+  dashCtx.stroke();
+}
+
+function doDash(){
+  if(dashCooldownLeft>0 || dashActive) return;
+  dashActive=true;
+  dashTimer=DASH_DURATION;
+  dashCooldownLeft=DASH_COOLDOWN;
+  // 突進方向 = 現在のfacing
+  dashVelX=Math.sin(SB.facing)*DASH_SPEED;
+  dashVelZ=Math.cos(SB.facing)*DASH_SPEED;
+  dashBtn.classList.add('cooldown');
+}
+
+dashBtn.style.background='rgba(40,180,80,0.55)';
+dashBtn.style.borderColor='rgba(80,220,120,0.8)';
+dashBtn.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();doDash();},{passive:false});
+dashBtn.addEventListener('click', doDash);
+
+function startGame(){
+  score=0; timeLeft=60; gameState='playing';
+  SB.pos.set(0,0,0); SB.vel.set(0,0,0); SB.facing=0;
+  dashCooldownLeft=0; dashActive=false; dashBtn.classList.remove('cooldown');
+  dashLabel.textContent='突進'; drawDashGauge(1);
+  pins.forEach(p=>scene.remove(p)); pins.length=0;
+  projectiles.forEach(p=>scene.remove(p.mesh)); projectiles.length=0;
+  for(let i=0;i<12;i++) spawnPin();
+  document.getElementById('overlay').style.display='none';
+  updateHUD();
+  timerInterval=setInterval(()=>{
+    if(gameState!=='playing')return;
+    timeLeft--; updateHUD();
+    if(timeLeft<=0) endGame();
+  },1000);
+}
+function endGame(){
+  gameState='end'; clearInterval(timerInterval);
+  const ov=document.getElementById('overlay');
+  ov.innerHTML=`
+    <div style="padding:28px 20px;text-align:center;max-width:320px;">
+      <div style="font-size:48px;margin-bottom:8px;">🐕</div>
+      <h1 style="font-size:26px;margin-bottom:6px;">タイムアップ！</h1>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px;">倒したピンの数</div>
+      <div class="final-score">${score} 本</div>
+      <div style="font-size:15px;color:#ffaa44;margin-bottom:28px;">${score>=30?'最強の柴犬！🏆':score>=15?'なかなかやるね！👏':'もっと走れ！💨'}</div>
+      <button onclick="startGame()" style="background:linear-gradient(135deg,#c86020,#e88030);border:none;color:#fff;font-size:17px;font-weight:bold;padding:13px 40px;border-radius:28px;cursor:pointer;letter-spacing:.06em;">🔄 もう一度！</button>
+      <div style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.25);">Beta 0.1.0</div>
+    </div>
+  `;
+  ov.style.display='flex';
+}
+document.getElementById('start-btn').addEventListener('click',startGame);
+document.getElementById('rule-btn').addEventListener('click',()=>{
+  document.getElementById('title-screen').style.display='none';
+  document.getElementById('rule-screen').style.display='block';
+});
+document.getElementById('rule-back-btn').addEventListener('click',()=>{
+  document.getElementById('rule-screen').style.display='none';
+  document.getElementById('title-screen').style.display='block';
+});
+
+// ══ Main Loop ═════════════════════════════════════
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05);
+  const t=clock.elapsedTime;
+
+  if(gameState==='playing'){
+    // 入力取得（jy<0=上=前）
+    let jx=joyState.dx, jy=joyState.dy;
+    if(keys['ArrowUp']||keys['w'])    jy=-1;
+    if(keys['ArrowDown']||keys['s'])  jy= 1;
+    if(keys['ArrowLeft']||keys['a'])  jx=-1;
+    if(keys['ArrowRight']||keys['d']) jx= 1;
+    if(keys[' ']){fireTongue(); keys[' ']=false;}
+    if(keys['f']){fireUnchi();  keys['f']=false;}
+
+    const inputLen=Math.sqrt(jx*jx+jy*jy);
+
+    if(inputLen>0.05){
+      if(tpsMode){
+        // ── TPSモード: GTAライク操作 ──
+        // スティックX → 直接ターン（120°/sec、1秒で1/3回転）
+        // スティックY → facingに沿って前後移動
+        const TPS_TURN = Math.PI * (150/180) * dt; // 150°/sec
+        SB.facing += -jx * Math.min(inputLen,1) * TPS_TURN; // 符号反転で左右修正
+
+        const spd = Math.min(inputLen,1) * SB.speed;
+        const fwdX = Math.sin(SB.facing);
+        const fwdZ = Math.cos(SB.facing);
+        SB.vel.x += (fwdX*(-jy)*spd - SB.vel.x)*0.28; // 0.18→0.28でキビキビ
+        SB.vel.z += (fwdZ*(-jy)*spd - SB.vel.z)*0.28;
+      } else {
+        // ── フリーモード: camYaw基準 ──
+        const camFwdX= Math.sin(camYaw);
+        const camFwdZ= Math.cos(camYaw);
+        const camRgtX=-Math.cos(camYaw);
+        const camRgtZ= Math.sin(camYaw);
+        let mx=camFwdX*(-jy)+camRgtX*jx;
+        let mz=camFwdZ*(-jy)+camRgtZ*jx;
+        const mlen=Math.sqrt(mx*mx+mz*mz)||1;
+        mx/=mlen; mz/=mlen;
+        const spd=Math.min(inputLen,1)*SB.speed;
+        SB.vel.x+=(mx*spd-SB.vel.x)*0.18;
+        SB.vel.z+=(mz*spd-SB.vel.z)*0.18;
+        const targetFacing=Math.atan2(mx,mz);
+        let diff=targetFacing-SB.facing;
+        while(diff>Math.PI) diff-=Math.PI*2;
+        while(diff<-Math.PI) diff+=Math.PI*2;
+        SB.facing+=diff*0.18;
+      }
+    } else {
+      SB.vel.x*=0.74; SB.vel.z*=0.74;
+    }
+
+    SB.pos.x+=SB.vel.x*dt;
+    SB.pos.z+=SB.vel.z*dt;
+
+    // 突進処理
+    if(dashActive){
+      dashTimer-=dt;
+      SB.pos.x+=dashVelX*dt;
+      SB.pos.z+=dashVelZ*dt;
+      dashVelX*=0.985; dashVelZ*=0.985;
+      if(dashTimer<=0) dashActive=false;
+    }
+    // クールダウン更新
+    if(dashCooldownLeft>0){
+      dashCooldownLeft=Math.max(0,dashCooldownLeft-dt);
+      const ratio=1-(dashCooldownLeft/DASH_COOLDOWN);
+      drawDashGauge(ratio);
+      dashLabel.textContent=dashCooldownLeft>0?Math.ceil(dashCooldownLeft)+'s':'突進';
+      if(dashCooldownLeft<=0){
+        dashBtn.classList.remove('cooldown');
+        dashLabel.textContent='突進';
+        drawDashGauge(1);
+      }
+    }
+
+    const bd=Math.sqrt(SB.pos.x**2+SB.pos.z**2);
+    if(bd>FIELD-1){SB.pos.x*=(FIELD-1)/bd; SB.pos.z*=(FIELD-1)/bd; SB.vel.multiplyScalar(0.3);}
+
+    shiba.root.position.x=SB.pos.x;
+    shiba.root.position.z=SB.pos.z;
+    shiba.root.rotation.y=SB.facing; // ★補正なし
+
+    // 走りアニメ
+    const spd=SB.vel.length();
+    SB.legPhase+=spd*dt*3.5;
+    const sw=Math.sin(SB.legPhase)*Math.min(spd/SB.speed,1)*0.45;
+    shiba.FL.rotation.x= sw; shiba.BR.rotation.x= sw;
+    shiba.FR.rotation.x=-sw; shiba.BL.rotation.x=-sw;
+    shiba.bodyG.position.y=0.75+Math.abs(Math.sin(SB.legPhase))*spd/SB.speed*0.06;
+    shiba.tailG.rotation.z=Math.sin(t*3.5)*0.28+spd*0.05;
+
+    // 敵の歩きアニメ
+    const walkPhase=Math.sin(t*3)*0.32;
+    pins.forEach(pin=>{
+      if(pin.userData.armL) pin.userData.armL.rotation.x= walkPhase;
+      if(pin.userData.armR) pin.userData.armR.rotation.x=-walkPhase;
+      if(pin.userData.legL) pin.userData.legL.rotation.x=-walkPhase;
+      if(pin.userData.legR) pin.userData.legR.rotation.x= walkPhase;
+    });
+
+    // ピン処理
+    pins.forEach(pin=>{
+      if(!pin.userData.alive){
+        // 吹っ飛び移動
+        pin.position.x+=pin.userData.blowX*dt;
+        pin.position.z+=pin.userData.blowZ*dt;
+        pin.userData.blowX*=0.97;
+        pin.userData.blowZ*=0.97;
+        // 倒れ回転
+        pin.userData.fallVel+=dt*15;
+        pin.userData.fallRot+=pin.userData.fallVel*dt;
+        pin.rotation.x=Math.min(pin.userData.fallRot,Math.PI/2);
+        pin.rotation.z+=pin.userData.spin*dt;
+        pin.userData.spin*=0.97;
+        return;
+      }
+      // 体当たり判定
+      const dx=pin.position.x-SB.pos.x;
+      const dz=pin.position.z-SB.pos.z;
+      if(Math.sqrt(dx*dx+dz*dz)<0.9){
+        knockPin(pin,SB.pos.x,SB.pos.z, dashActive?200:35);
+      }
+    });
+
+    // プロジェクタイル処理
+    for(let i=projectiles.length-1;i>=0;i--){
+      const p=projectiles[i];
+      p.mesh.position.x+=p.vel.x*dt;
+      p.mesh.position.y+=p.vel.y*dt;
+      p.mesh.position.z+=p.vel.z*dt;
+      if(p.gravity){
+        p.vel.y-=14*dt;
+        if(p.mesh.position.y<0.2){
+          p.mesh.position.y=0.2;
+          p.vel.y*=-0.4; p.vel.x*=0.6; p.vel.z*=0.6;
+        }
+      }
+      p.mesh.rotation.y+=dt*5;
+      p.life-=dt;
+
+      // うんちの爆発タイマー
+      if(p.explodeTimer!==undefined && !p.exploded){
+        p.explodeTimer-=dt;
+        // 点滅警告（残り0.5秒）
+        if(p.ring){
+          const blink=p.explodeTimer<0.5?Math.sin(t*30)*0.5+0.5:1;
+          p.ring.material.opacity=0.8*blink;
+          p.ring.scale.setScalar(1+Math.sin(t*8)*0.08);
+        }
+        if(p.explodeTimer<=0){
+          explodeUnchi(p);
+          continue;
+        }
+      }
+
+      // 通常プロジェクタイルのピン当たり判定
+      if(!p.explodeTimer){
+        let hit=false;
+        for(const pin of pins){
+          if(!pin.userData.alive) continue;
+          const dx=pin.position.x-p.mesh.position.x;
+          const dz=pin.position.z-p.mesh.position.z;
+          const distXZ=Math.sqrt(dx*dx+dz*dz);
+          if(distXZ<0.6 && p.mesh.position.y<1.4 && p.mesh.position.y>-0.2){
+            knockPin(pin,p.mesh.position.x,p.mesh.position.z,40);
+            hit=true; break;
+          }
+        }
+        if(p.life<=0||hit){
+          scene.remove(p.mesh); projectiles.splice(i,1);
+        }
+      } else if(p.life<=0){
+        scene.remove(p.mesh); projectiles.splice(i,1);
+      }
+    }
+
+    if(pins.filter(p=>p.userData.alive).length<6) spawnPin();
+
+  } else {
+    shiba.root.rotation.y=t*0.5;
+    shiba.tailG.rotation.z=Math.sin(t*3)*0.25;
+  }
+
+  // ── カメラ追従 ──
+  const tx=shiba.root.position.x, tz=shiba.root.position.z;
+  if(tpsMode){
+    // TPSモード: 犬の真後ろ固定追従 + 一時視点オフセット
+    // 指を離したらオフセットを自然に0へ戻す（lerp）
+    if(!tpsDragging){
+      tpsYawOffset  *= 0.88; // 自然に戻る速度
+      tpsPitchOffset*= 0.88;
+      if(Math.abs(tpsYawOffset)<0.001)   tpsYawOffset=0;
+      if(Math.abs(tpsPitchOffset)<0.001) tpsPitchOffset=0;
+    }
+    // 合成Yaw/Pitch（facing + オフセット）
+    const totalYaw   = SB.facing + tpsYawOffset;
+    const totalPitch = 0.32 + tpsPitchOffset; // 基本仰角0.32（低め・前が見やすい）
+    const tpsDist=camDist*0.7;
+    const behindX=tx - Math.sin(totalYaw)*tpsDist*Math.cos(totalPitch);
+    const behindZ=tz - Math.cos(totalYaw)*tpsDist*Math.cos(totalPitch);
+    const behindY=tpsDist*Math.sin(totalPitch)+0.8;
+    camera.position.x+=(behindX-camera.position.x)*0.10;
+    camera.position.y+=(behindY-camera.position.y)*0.10;
+    camera.position.z+=(behindZ-camera.position.z)*0.10;
+    camera.lookAt(tx,1.0,tz);
+    // フリーモードに戻ったとき用にcamYawを同期
+    camYaw=SB.facing;
+  } else {
+    // フリーモード: 従来のカメラ
+    const cx=tx - Math.sin(camYaw)*camDist*Math.cos(camPitch);
+    const cy=camDist*Math.sin(camPitch)+0.8;
+    const cz=tz - Math.cos(camYaw)*camDist*Math.cos(camPitch);
+    camera.position.x+=(cx-camera.position.x)*0.10;
+    camera.position.y+=(cy-camera.position.y)*0.10;
+    camera.position.z+=(cz-camera.position.z)*0.10;
+    camera.lookAt(tx,1.0,tz);
+  }
+
+  renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
