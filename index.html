@@ -160,8 +160,10 @@ canvas { display:block; }
   transition:background .15s, border-color .15s;
   user-select:none; -webkit-user-select:none;
 }
-#cam-btn.cam-tps { background:rgba(200,120,30,0.55); border-color:#c87830; }
-#cam-btn.cam-fps { background:rgba(80,160,80,0.55); border-color:#50c870; }
+#cam-btn.tps {
+  background:rgba(200,120,30,0.55);
+  border-color:#c87830;
+}
 /* 突進ボタン */
 #dash-btn-wrap {
   position:relative;
@@ -241,16 +243,6 @@ canvas { display:block; }
   </div>
 </div>
 <div id="combo-popup"></div>
-<div id="reticle" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:25;">
-  <svg width="48" height="48" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="2" fill="rgba(255,255,255,0.95)"/>
-    <line x1="24" y1="6" x2="24" y2="16" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="24" y1="32" x2="24" y2="42" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="6" y1="24" x2="16" y2="24" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="32" y1="24" x2="42" y2="24" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="24" cy="24" r="10" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
-  </svg>
-</div>
 <div id="laser-bar">
   <div id="laser-bar-label">☄️ 破壊光線発射中！</div>
   <div id="laser-bar-track"><div id="laser-bar-fill"></div></div>
@@ -267,7 +259,7 @@ canvas { display:block; }
       <button id="start-btn">🐾 スタート！</button>
       <button id="rule-btn">📋 ルール</button>
     </div>
-    <div id="version-tag">Beta 0.3.1</div>
+    <div id="version-tag">Beta 0.2.0</div>
   </div>
   <!-- ルール画面 -->
   <div id="rule-screen" style="display:none;">
@@ -277,7 +269,7 @@ canvas { display:block; }
       <div class="rule-item">💥 体当たり<span>+1点</span></div>
       <div class="rule-item">👅 舌攻撃<span>顔の前方に発射</span></div>
       <div class="rule-item">💩 うんち<span>おしりから放物線</span></div>
-      <div class="rule-item">💨 突進<span>0.45秒高速移動／5秒CD</span></div>
+      <div class="rule-item">💨 突進<span>1秒間超高速／5秒CD</span></div>
       <div class="rule-item">📷 カメラ<span>フリー／TPS切替</span></div>
     </div>
     <button id="rule-back-btn">← もどる</button>
@@ -571,7 +563,7 @@ function spawnPin(){
   const a=Math.random()*Math.PI*2, r=5+Math.random()*(FIELD-6);
   const pin=buildPin();
   pin.position.set(Math.cos(a)*r,0,Math.sin(a)*r);
-  Object.assign(pin.userData,{alive:true, fallVel:0, fallRot:0, blowX:0, blowZ:0, spin:0});
+  pin.userData={alive:true, fallVel:0, fallRot:0, blowX:0, blowZ:0, spin:0};
   scene.add(pin); pins.push(pin);
 }
 
@@ -679,7 +671,7 @@ function explodeUnchi(proj){
   },16);
 
   // 爆発範囲 半径5.0
-  const BLAST_R=4.0;
+  const BLAST_R=2.6;
   pins.forEach(pin=>{
     if(!pin.userData.alive) return;
     const dx=pin.position.x-ex.x;
@@ -751,8 +743,7 @@ window.addEventListener('touchend',e=>{
 
 // ══ Camera ════════════════════════════════════════
 let camYaw=0, camPitch=0.32, camDist=7.5;
-let cameraMode='free'; // 'free'|'tps'|'fps'
-let tpsMode=false; // 後方互換用
+let tpsMode=false;
 let camTouchId=null, camPX=0, camPY=0, camDrag=false;
 // TPSモード時の一時視点オフセット
 let tpsYawOffset=0, tpsPitchOffset=0;  // 指を離すと0に戻る
@@ -931,19 +922,14 @@ function updateHUD(){
   const tv=document.getElementById('timer-val');
   tv.textContent=timeLeft; tv.className=timeLeft<=10?'danger':'';
 }
-let comboCount=0, comboTimer=null;
 function showCombo(txt){
   const el=document.getElementById('combo-popup');
-  comboCount++;
-  el.textContent= comboCount>1 ? `+${comboCount} 🐾` : txt;
-  el.style.transition='none'; el.style.opacity='1';
+  el.textContent=txt; el.style.transition='none'; el.style.opacity='1';
   el.style.transform='translateX(-50%) scale(1.3)';
-  if(comboTimer) clearTimeout(comboTimer);
-  comboTimer=setTimeout(()=>{
+  setTimeout(()=>{
     el.style.transition='opacity .5s,transform .5s';
     el.style.opacity='0'; el.style.transform='translateX(-50%) scale(0.9)';
-    comboTimer=null; comboCount=0;
-  },500);
+  },400);
 }
 
 // ══ Start / End ═══════════════════════════════════
@@ -986,31 +972,43 @@ function fireLaser(){
   tongueBtn2.style.borderColor='#ff4400';
 
   // ビーム生成
-  const L=25;
+  // 正面=facing方向。rotation.y で向きを合わせ、X軸方向に伸ばす
   const g=new THREE.Group();
-  // shiba.rootの子にする → 犬が回転すれば自動追従
-  // ローカル座標: 顔の前方=+Z, 高さは顔の位置
-  // CylinderはデフォルトでローカルY軸方向 → rotation.x=-PI/2で+Z向きに
-  g.position.set(0, 1.05, 0); // 犬のローカル座標(顔の高さ)
-  g.rotation.set(Math.PI/2, 0, 0); // +Z(犬の正面、検証済み)方向に向ける
-
+  const fwd=forwardVec(SB.facing);
+  // 発射位置: 犬の口元（前方0.6, 高さ1.35）
+  g.position.set(
+    shiba.root.position.x + fwd.x*0.6,
+    1.35,
+    shiba.root.position.z + fwd.z*0.6
+  );
+  // ビームをfacing方向に向ける
+  // CylinderはY軸方向なので、Z軸回転+Y軸回転で正面に向ける
+  g.rotation.y = -(SB.facing);
+  const L=25;
+  // 太さを2倍: 0.07/0.20/0.48/0.92
   [[0.07,0xffffff,1.0],[0.20,0xff2200,0.75],[0.48,0xff6600,0.35],[0.92,0xffaa00,0.10]]
   .forEach(([r,col,op])=>{
     const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,16),
       new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op}));
-    m.position.set(0, L/2+0.8, 0); // 口元前方から伸ばす
-    g.add(m);
+    m.rotation.z=Math.PI/2; m.position.x=L/2; g.add(m);
   });
-  // 発射口フラッシュ（顔を隠さない口元前）
-  const flash=new THREE.Mesh(new THREE.SphereGeometry(0.3,12,10),
+  const flash=new THREE.Mesh(new THREE.SphereGeometry(0.9,12,10),
     new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1.0}));
-  flash.position.set(0, 1.0, 0);
   g.add(flash);
-  // sceneではなくshiba.rootの子として追加
-  shiba.root.add(g);
-  laserMesh=g;
+  scene.add(g); laserMesh=g;
 
-    laserBarEl.classList.add('active');
+  // 範囲内の全ピン→超ぶっ飛ばし（power 350）
+  // cross < 3.0（太さ2倍に合わせた当たり範囲）
+  pins.forEach(pin=>{
+    if(!pin.userData.alive) return;
+    const dx=pin.position.x-shiba.root.position.x;
+    const dz=pin.position.z-shiba.root.position.z;
+    const dot=dx*fwd.x+dz*fwd.z;
+    const cross=Math.abs(dx*fwd.z-dz*fwd.x);
+    if(dot>0 && dot<L && cross<3.0) knockPin(pin,shiba.root.position.x,shiba.root.position.z,350);
+  });
+
+  laserBarEl.classList.add('active');
   laserBarFill.style.width='100%';
   scene.background=new THREE.Color(0x220800);
   setTimeout(()=>scene.background=new THREE.Color(0x7ec898),180);
@@ -1019,11 +1017,7 @@ const laserBarEl=document.getElementById('laser-bar');
 const laserBarFill=document.getElementById('laser-bar-fill');
 function endLaser(){
   laserActive=false;
-  if(laserMesh){
-    // shiba.rootの子として追加したので shiba.rootから削除
-    shiba.root.remove(laserMesh);
-    laserMesh=null;
-  }
+  if(laserMesh){scene.remove(laserMesh);laserMesh=null;}
   tongueBtn2.innerHTML='👅<span class="atk-label">舌攻撃</span>';
   tongueBtn2.style.background=''; tongueBtn2.style.borderColor='';
   laserBarEl.classList.remove('active');
@@ -1045,7 +1039,7 @@ function fireGoldUnchi(){
   unchiBtn2.classList.remove('gold-mode');
   unchiBtn2.innerHTML='💩<span class="atk-label">うんち</span>';
   const back=forwardVec(SB.facing).multiplyScalar(-1);
-  const gu=buildGoldUnchiItem(1.5);
+  const gu=buildGoldUnchiItem(3);
   gu.position.set(shiba.root.position.x+back.x*0.7, 1.2, shiba.root.position.z+back.z*0.7);
   scene.add(gu);
   goldProjectiles.push({mesh:gu, vel:back.clone().multiplyScalar(8).add(new THREE.Vector3(0,4,0)), explodeTimer:3.0, exploded:false});
@@ -1146,23 +1140,16 @@ unchiBtn2.addEventListener('click', handleUnchiBtn);
 // カメラモード切替
 // カメラモード切替
 const camBtn=document.getElementById('cam-btn');
-const CAM_MODES=['free','tps','fps'];
-const CAM_LABELS={'free':'📷 フリー','tps':'📷 TPS','fps':'👁 FPS'};
-function cycleCamera(){
-  const idx=CAM_MODES.indexOf(cameraMode);
-  cameraMode=CAM_MODES[(idx+1)%3];
-  tpsMode=(cameraMode==='tps'||cameraMode==='fps');
-  camBtn.textContent=CAM_LABELS[cameraMode];
-  camBtn.className='';
-  if(cameraMode==='tps') camBtn.classList.add('cam-tps');
-  if(cameraMode==='fps') camBtn.classList.add('cam-fps');
-  // レティクル表示切替
-  document.getElementById('reticle').style.display=
-    cameraMode==='fps'?'block':'none';
-}
-camBtn.addEventListener('click', cycleCamera);
+camBtn.addEventListener('click',()=>{
+  tpsMode=!tpsMode;
+  camBtn.textContent=tpsMode?'📷 TPS':'📷 フリー';
+  camBtn.classList.toggle('tps',tpsMode);
+});
 camBtn.addEventListener('touchstart',e=>{
-  e.stopPropagation(); e.preventDefault(); cycleCamera();
+  e.stopPropagation(); e.preventDefault();
+  tpsMode=!tpsMode;
+  camBtn.textContent=tpsMode?'📷 TPS':'📷 フリー';
+  camBtn.classList.toggle('tps',tpsMode);
 },{passive:false});
 
 // ── 突進ボタン ──
@@ -1170,8 +1157,8 @@ const DASH_COOLDOWN = 5.0; // 5秒
 let dashCooldownLeft = 0;
 let dashActive = false;
 let dashVelX = 0, dashVelZ = 0;
-const DASH_SPEED = 35;
-const DASH_DURATION = 0.45; // 突進持続時間(秒)
+const DASH_SPEED = 220;
+const DASH_DURATION = 0.5;  // 突進持続時間(秒)
 let dashTimer = 0;
 
 const dashBtn  = document.getElementById('dash-btn');
@@ -1214,28 +1201,11 @@ dashBtn.style.borderColor='rgba(80,220,120,0.8)';
 dashBtn.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();doDash();},{passive:false});
 dashBtn.addEventListener('click', doDash);
 
-function goTitle(){
-  // ゲームを止めてタイトルに戻る
-  clearInterval(timerInterval); timerInterval=null;
-  gameState='title';
-  const ov=document.getElementById('overlay');
-  ov.style.display='flex';
-  document.getElementById('title-screen').style.display='block';
-  document.getElementById('rule-screen').style.display='none';
-  // レーザー・アイテムなどをクリーンアップ
-  if(laserMesh){shiba.root.remove(laserMesh);laserMesh=null;} laserActive=false;
-  items.forEach(m=>scene.remove(m)); items.length=0;
-  goldProjectiles.forEach(p=>scene.remove(p.mesh)); goldProjectiles.length=0;
-  pins.forEach(p=>{if(!p.userData.alive) return; scene.remove(p);}); 
-}
-
 function startGame(){
   score=0; timeLeft=60; gameState='playing';
   SB.pos.set(0,0,0); SB.vel.set(0,0,0); SB.facing=0;
   dashCooldownLeft=0; dashActive=false; dashBtn.classList.remove('cooldown');
-  comboCount=0;
   // アイテムリセット
-  pins.forEach(p=>{p.userData.moveAngle=Math.random()*Math.PI*2; p.userData.moveTimer=Math.random()*3;});
   items.forEach(m=>scene.remove(m)); items.length=0;
   goldProjectiles.forEach(p=>scene.remove(p.mesh)); goldProjectiles.length=0;
   goldExplosions.forEach(e=>e.objs.forEach(o=>{if(o.m.parent)scene.remove(o.m);})); goldExplosions.length=0;
@@ -1267,11 +1237,8 @@ function endGame(){
       <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px;">倒したピンの数</div>
       <div class="final-score">${score} 本</div>
       <div style="font-size:15px;color:#ffaa44;margin-bottom:28px;">${score>=30?'最強の柴犬！🏆':score>=15?'なかなかやるね！👏':'もっと走れ！💨'}</div>
-      <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
-        <button onclick="startGame()" style="background:linear-gradient(135deg,#c86020,#e88030);border:none;color:#fff;font-size:17px;font-weight:bold;padding:13px 40px;border-radius:28px;cursor:pointer;letter-spacing:.06em;">🔄 もう一度！</button>
-        <button onclick="goTitle()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:14px;padding:10px 32px;border-radius:24px;cursor:pointer;letter-spacing:.04em;">🏠 タイトルへ</button>
-      </div>
-      <div style="margin-top:14px;font-size:10px;color:rgba(255,255,255,0.25);">Beta 0.3.1</div>
+      <button onclick="startGame()" style="background:linear-gradient(135deg,#c86020,#e88030);border:none;color:#fff;font-size:17px;font-weight:bold;padding:13px 40px;border-radius:28px;cursor:pointer;letter-spacing:.06em;">🔄 もう一度！</button>
+      <div style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.25);">Beta 0.2.0</div>
     </div>
   `;
   ov.style.display='flex';
@@ -1470,41 +1437,6 @@ function animate(){
       itemTimer=ITEM_SPAWN_INTERVAL+(Math.random()*10-5);
     }
 
-    // ── 敵の移動AI ──
-    pins.forEach(pin=>{
-      if(!pin.userData.alive) return;
-      // ランダム方向変更（低頻度）
-      if(!pin.userData.moveAngle) pin.userData.moveAngle=Math.random()*Math.PI*2;
-      if(!pin.userData.moveTimer) pin.userData.moveTimer=Math.random()*3;
-      pin.userData.moveTimer-=dt;
-      if(pin.userData.moveTimer<=0){
-        // 新しい方向を決める（プレイヤーに少し向く）
-        const toDogX=SB.pos.x-pin.position.x;
-        const toDogZ=SB.pos.z-pin.position.z;
-        const toDogAngle=Math.atan2(toDogX,toDogZ);
-        // 30%の確率でプレイヤー方向、70%はランダム
-        pin.userData.moveAngle=Math.random()<0.3
-          ?toDogAngle+( Math.random()-0.5)*0.8
-          :Math.random()*Math.PI*2;
-        pin.userData.moveTimer=1.5+Math.random()*2.5;
-      }
-      const ENEMY_SPEED=1.8;
-      const mvx=Math.sin(pin.userData.moveAngle)*ENEMY_SPEED*dt;
-      const mvz=Math.cos(pin.userData.moveAngle)*ENEMY_SPEED*dt;
-      const nx=pin.position.x+mvx;
-      const nz=pin.position.z+mvz;
-      // フィールド内に収める
-      if(Math.sqrt(nx*nx+nz*nz)<FIELD-1){
-        pin.position.x=nx; pin.position.z=nz;
-      } else {
-        // 壁に当たったら方向転換
-        pin.userData.moveAngle+=Math.PI+( Math.random()-0.5)*0.5;
-        pin.userData.moveTimer=0;
-      }
-      // 敵の向きも移動方向に合わせる
-      pin.rotation.y=pin.userData.moveAngle+Math.PI;
-    });
-
     // ── アイテム浮遊・取得判定 ──
     for(let i=items.length-1;i>=0;i--){
       const item=items[i];
@@ -1526,23 +1458,18 @@ function animate(){
       laserLife-=dt;
       // ゲージ更新
       if(laserBarFill) laserBarFill.style.width=(laserLife/LASER_DURATION*100)+'%';
-      // shiba.rootの子なので位置・回転は自動追従
-      // 当たり判定: 犬の正面方向(SB.facing)基準
+      // ビームの向きを犬の正面に追従
       const fwdL=forwardVec(SB.facing);
-      pins.forEach(pin=>{
-        if(!pin.userData.alive) return;
-        const dx=pin.position.x-shiba.root.position.x;
-        const dz=pin.position.z-shiba.root.position.z;
-        const dot  = dx*fwdL.x + dz*fwdL.z;
-        const cross= Math.abs(dx*fwdL.z - dz*fwdL.x);
-        if(dot>0 && dot<25 && cross<1.2)
-          knockPin(pin,shiba.root.position.x,shiba.root.position.z,350);
-      });
-
+      laserMesh.position.set(
+        shiba.root.position.x+fwdL.x*0.6,
+        1.35,
+        shiba.root.position.z+fwdL.z*0.6
+      );
+      laserMesh.rotation.y=-SB.facing;
       // 脈動
       const pulse=1+Math.sin(t*35)*0.06;
       laserMesh.children.forEach((c,ci)=>{
-        if(c.scale && ci<4) c.scale.set(pulse,1,pulse);
+        if(ci>0 && c.scale) c.scale.set(1,pulse,pulse);
       });
       if(laserLife<=0) endLaser();
     }
