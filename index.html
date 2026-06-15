@@ -10,18 +10,80 @@ body { background:#000; overflow:hidden; height:100vh; font-family:sans-serif; }
 canvas { display:block; }
 #hud {
   position:fixed; top:0; left:0; right:0;
-  display:flex; justify-content:space-between; align-items:flex-start;
-  padding:14px 18px; pointer-events:none; z-index:20;
+  display:flex; flex-direction:column; gap:5px;
+  padding:8px 12px 0; pointer-events:none; z-index:20;
 }
-#score-box, #timer-box {
-  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2);
-  border-radius:12px; padding:6px 16px; color:#fff; font-size:22px; font-weight:bold;
+#hud-row1 { display:flex; justify-content:space-between; align-items:flex-start; gap:6px; }
+.hud-box {
+  background:rgba(0,0,0,0.52); border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px; padding:4px 10px; color:#fff;
+  font-size:18px; font-weight:bold; text-align:center; flex:1;
 }
-#timer-box { text-align:right; }
-.hud-label { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:1px; }
+.hud-label { font-size:8px; color:rgba(255,255,255,0.45); letter-spacing:.06em; margin-bottom:0; display:block; }
 #timer-val { color:#ffdd44; }
 #timer-val.danger { color:#ff4444; animation:blink .4s infinite alternate; }
+#kills-val { color:#88ddff; }
 @keyframes blink { from{opacity:1}to{opacity:.3} }
+/* HPバー */
+#hp-row { display:flex; align-items:center; gap:7px; padding:0 2px; }
+#hp-icon { font-size:13px; flex-shrink:0; }
+/* ポーズボタン */
+#pause-btn {
+  width:34px; height:34px; border-radius:50%; flex-shrink:0;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2);
+  color:#fff; font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; pointer-events:auto;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .15s;
+}
+#pause-btn:active { background:rgba(255,255,255,0.15); }
+
+/* ポーズオーバーレイ */
+#pause-overlay {
+  position:fixed; inset:0; z-index:50;
+  background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+#pause-overlay.open { opacity:1; pointer-events:auto; }
+#pause-panel {
+  width:100%; max-width:300px; margin:0 20px;
+  background:rgba(20,35,20,0.95);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:20px; overflow:hidden;
+  transform:scale(0.92) translateY(12px); transition:transform .2s ease;
+  box-shadow:0 20px 60px rgba(0,0,0,0.6);
+}
+#pause-overlay.open #pause-panel { transform:scale(1) translateY(0); }
+#pause-header {
+  padding:20px 20px 14px; text-align:center;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+}
+#pause-dog   { font-size:36px; margin-bottom:6px; display:block; }
+#pause-title { font-size:20px; font-weight:bold; letter-spacing:.06em; }
+#pause-stats {
+  display:flex; justify-content:center; gap:16px;
+  margin-top:10px; padding-top:10px;
+  border-top:1px solid rgba(255,255,255,0.07);
+}
+.p-stat { text-align:center; }
+.p-stat-label { font-size:9px; color:rgba(255,255,255,0.4); letter-spacing:.06em; }
+.p-stat-val   { font-size:20px; font-weight:bold; margin-top:1px; }
+#pause-btns { padding:14px 16px 18px; display:flex; flex-direction:column; gap:10px; }
+.p-btn {
+  width:100%; padding:14px; border-radius:14px; border:none;
+  font-size:15px; font-weight:bold; cursor:pointer; letter-spacing:.04em;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  -webkit-tap-highlight-color:transparent; transition:transform .1s;
+}
+.p-btn:active { transform:scale(0.97); }
+#pause-resume-btn { background:linear-gradient(135deg,#22aa44,#33cc66); color:#fff; box-shadow:0 4px 16px rgba(30,160,70,0.35); }
+#pause-end-btn    { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); }
+
+#hp-bar-wrap { flex:1; height:8px; border-radius:4px; background:rgba(255,255,255,0.12); overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
+#hp-bar-fill { height:100%; border-radius:4px; width:100%; background:linear-gradient(90deg,#22cc44,#44ee66); box-shadow:0 0 5px rgba(40,200,80,0.5); transition:width .25s ease, background .3s; }
+#hp-text { font-size:10px; color:rgba(255,255,255,0.65); flex-shrink:0; min-width:40px; text-align:right; }
 #joystick-area { position:fixed; left:24px; bottom:36px; z-index:20; width:120px; height:120px; }
 #joystick-base {
   width:120px; height:120px; border-radius:50%;
@@ -111,7 +173,7 @@ canvas { display:block; }
 .final-score { font-size:52px; font-weight:bold; color:#ffdd44; margin:10px 0; }
 /* ズームトグルアイコン */
 #zoom-toggle {
-  position:fixed; right:14px; top:80px;
+  position:fixed; right:14px; top:86px;
   width:36px; height:36px; border-radius:50%;
   background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.22);
   color:#fff; font-size:17px;
@@ -126,7 +188,7 @@ canvas { display:block; }
 }
 /* ズームバー */
 #zoom-bar {
-  position:fixed; right:6px; top:126px; bottom:200px;
+  position:fixed; right:6px; top:130px; bottom:200px;
   width:28px; display:flex; align-items:center; justify-content:center;
   z-index:20;
   opacity:0; pointer-events:none; transform:translateX(20px);
@@ -152,7 +214,7 @@ canvas { display:block; }
 }
 #zoom-thumb:active { cursor:grabbing; box-shadow:0 0 0 5px rgba(255,255,255,0.35), 0 2px 8px rgba(0,0,0,0.5); }
 #cam-btn {
-  position:fixed; left:14px; top:80px; z-index:21;
+  position:fixed; left:14px; top:86px; z-index:21;
   background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.22);
   color:#fff; font-size:12px; font-weight:bold;
   padding:7px 12px; border-radius:20px; cursor:pointer;
@@ -160,22 +222,20 @@ canvas { display:block; }
   transition:background .15s, border-color .15s;
   user-select:none; -webkit-user-select:none;
 }
-#cam-btn.tps {
-  background:rgba(200,120,30,0.55);
-  border-color:#c87830;
-}
+#cam-btn.cam-tps { background:rgba(200,120,30,0.55); border-color:#c87830; }
+#cam-btn.cam-fps { background:rgba(80,160,80,0.55); border-color:#50c870; }
 /* 突進ボタン */
 #dash-btn-wrap {
   position:relative;
-  width:58px; height:58px;
+  width:64px; height:64px;
   display:flex; align-items:center; justify-content:center;
 }
 #dash-gauge {
-  position:absolute; top:-3px; left:-3px; width:64px; height:64px;
+  position:absolute; top:0; left:0; width:64px; height:64px;
   pointer-events:none; z-index:2;
 }
 #dash-btn {
-  position:relative; z-index:1;
+  position:relative; z-index:1; width:54px; height:54px; font-size:19px;
 }
 #dash-btn.cooldown {
   background:rgba(80,80,80,0.55) !important; border-color:rgba(120,120,120,0.5) !important;
@@ -183,7 +243,7 @@ canvas { display:block; }
 }
 /* 破壊光線ゲージ */
 #laser-bar {
-  position:fixed; top:76px; left:50%; transform:translateX(-50%);
+  position:fixed; top:89px; left:50%; transform:translateX(-50%);
   z-index:25; display:none; flex-direction:column; align-items:center; gap:3px;
   pointer-events:none;
 }
@@ -202,6 +262,157 @@ canvas { display:block; }
   box-shadow:0 0 6px rgba(255,100,0,0.8);
   transition:width .1s linear;
 }
+/* ── ゲームオーバー・リザルト共通アニメ ── */
+@keyframes dogFall {
+  from { transform:translateY(-60px) rotate(-15deg); opacity:0; }
+  to   { transform:translateY(0) rotate(0deg); opacity:1; }
+}
+@keyframes dogBounce {
+  from { transform:translateY(0) rotate(-3deg); }
+  to   { transform:translateY(-6px) rotate(3deg); }
+}
+@keyframes spinIn {
+  from { transform:scale(0) rotate(-180deg); opacity:0; }
+  to   { transform:scale(1) rotate(0deg); opacity:1; }
+}
+@keyframes slideUp {
+  from { transform:translateY(16px); opacity:0; }
+  to   { transform:translateY(0); opacity:1; }
+}
+.go-dog {
+  font-size:76px; line-height:1; display:inline-block;
+  animation:dogFall .6s cubic-bezier(.36,.07,.19,.97) both,
+            dogBounce 1.2s ease-in-out .6s infinite alternate;
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,0.5));
+}
+.go-x {
+  font-size:26px; display:block; margin-bottom:2px; color:#ff4444;
+  animation:spinIn .5s ease .3s both;
+}
+.go-title-txt {
+  font-size:26px; font-weight:bold; letter-spacing:.06em; margin:6px 0 3px;
+  animation:slideUp .4s ease .4s both;
+  background:linear-gradient(135deg,#ff6666,#ff9944);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.go-sub-txt {
+  font-size:12px; color:rgba(255,255,255,0.45); margin-bottom:16px;
+  animation:slideUp .4s ease .5s both;
+}
+.go-card {
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
+  border-radius:14px; padding:14px; margin-bottom:16px;
+  animation:slideUp .4s ease .6s both;
+}
+.go-card-label { font-size:9px; color:rgba(255,255,255,0.4); letter-spacing:.12em; margin-bottom:4px; }
+.go-final-score {
+  font-size:50px; font-weight:bold; color:#ffdd44; line-height:1;
+  text-shadow:0 0 20px rgba(255,200,0,0.4); margin-bottom:2px;
+}
+.go-score-unit { font-size:13px; color:rgba(255,255,255,0.35); margin-bottom:8px; }
+.go-stats { display:flex; justify-content:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; }
+.go-stat { flex:1; padding:0 10px; border-right:1px solid rgba(255,255,255,0.08); }
+.go-stat:last-child { border-right:none; }
+.go-stat-label { font-size:8px; color:rgba(255,255,255,0.4); letter-spacing:.06em; margin-bottom:1px; }
+.go-stat-val   { font-size:17px; font-weight:bold; }
+.go-msg { font-size:13px; color:#ffaa44; margin-bottom:16px; animation:slideUp .4s ease .7s both; }
+.go-btns { display:flex; flex-direction:column; gap:9px; align-items:center; animation:slideUp .4s ease .8s both; }
+.go-btn-primary {
+  background:linear-gradient(135deg,#c86020,#e88030); border:none; color:#fff;
+  font-size:16px; font-weight:bold; padding:13px 44px; border-radius:28px;
+  cursor:pointer; letter-spacing:.06em; box-shadow:0 4px 18px rgba(200,80,20,0.4);
+  width:100%; max-width:230px;
+}
+.go-btn-secondary {
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+  color:rgba(255,255,255,0.8); font-size:13px; padding:10px 32px;
+  border-radius:22px; cursor:pointer; width:100%; max-width:230px;
+}
+.go-ver { font-size:10px; color:rgba(255,255,255,0.2); margin-top:12px; letter-spacing:.06em; }
+.go-star { position:fixed; pointer-events:none; font-size:18px; opacity:0; animation:starFloat 2s ease forwards; }
+@keyframes starFloat {
+  0%   { opacity:1; transform:translateY(0) scale(1); }
+  100% { opacity:0; transform:translateY(-80px) scale(0.5); }
+}
+/* ── 全画面スライド（ルール・リリースノート）── */
+.full-screen {
+  position:fixed; inset:0; z-index:60;
+  background:#1a2a1a;
+  overflow-y:scroll;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y; /* * {touch-action:none} を上書き → 縦スクロール有効 */
+  transform:translateX(100%); transition:transform .3s ease;
+}
+.full-screen.open { transform:translateX(0); }
+/* full-screen内の全要素もスクロール許可 */
+.full-screen * { touch-action:pan-y !important; }
+.fs-body {
+  padding:14px 14px 40px; max-width:480px; margin:0 auto;
+  touch-action:pan-y !important;
+  -webkit-overflow-scrolling:touch;
+}
+.fs-header {
+  position:sticky; top:0; z-index:10;
+  background:rgba(20,35,20,0.95); backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding:14px 18px; display:flex; align-items:center; gap:12px;
+}
+.fs-back {
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+  color:#fff; font-size:12px; padding:6px 14px; border-radius:16px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.fs-title { font-size:15px; font-weight:bold; letter-spacing:.06em; }
+.fs-sub   { font-size:10px; color:rgba(255,255,255,0.4); margin-top:1px; }
+/* fs-body は上で定義済み */
+/* ルールブック */
+.rb-section { margin-bottom:18px; }
+.rb-section-title {
+  font-size:10px; font-weight:bold; letter-spacing:.14em;
+  color:rgba(255,255,255,0.4); margin-bottom:8px;
+  display:flex; align-items:center; gap:6px;
+}
+.rb-section-title::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.08); }
+.rb-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden; margin-bottom:8px; }
+.rb-row { display:flex; align-items:flex-start; gap:10px; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.rb-row:last-child { border-bottom:none; }
+.rb-icon  { font-size:20px; flex-shrink:0; width:28px; text-align:center; margin-top:1px; }
+.rb-label { font-size:13px; font-weight:bold; margin-bottom:2px; }
+.rb-desc  { font-size:11px; color:rgba(255,255,255,0.55); line-height:1.5; }
+.rb-tag { display:inline-block; font-size:9px; padding:2px 7px; border-radius:8px; margin-left:5px; font-weight:bold; vertical-align:middle; }
+.tag-cd   { background:rgba(80,180,255,0.15); color:#88ddff; border:1px solid rgba(80,180,255,0.2); }
+.tag-new  { background:rgba(80,200,100,0.15); color:#44ee66; border:1px solid rgba(80,200,100,0.2); }
+.tag-item { background:rgba(255,200,80,0.15); color:#ffdd44; border:1px solid rgba(255,200,80,0.2); }
+.rb-score-card { background:rgba(255,221,68,0.06); border:1px solid rgba(255,221,68,0.15); border-radius:12px; padding:12px 14px; }
+.rb-score-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12px; }
+.rb-score-row+.rb-score-row { border-top:1px solid rgba(255,255,255,0.05); }
+.rb-score-label { color:rgba(255,255,255,0.6); }
+.rb-score-val   { font-weight:bold; color:#ffdd44; }
+.rb-score-total { margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,221,68,0.2); text-align:center; font-size:11px; color:rgba(255,255,255,0.45); }
+.rb-tip { background:rgba(255,255,255,0.03); border-left:3px solid rgba(80,200,100,0.5); border-radius:0 8px 8px 0; padding:8px 12px; font-size:11px; color:rgba(255,255,255,0.6); line-height:1.6; margin-bottom:6px; }
+.rb-tip b { color:#44ee66; }
+/* リリースノート */
+.ver-card { margin-bottom:16px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
+.ver-header { display:flex; align-items:center; gap:10px; padding:12px 16px; background:rgba(255,255,255,0.05); }
+.ver-badge { font-size:11px; font-weight:bold; padding:3px 10px; border-radius:10px; letter-spacing:.06em; flex-shrink:0; }
+.badge-latest { background:rgba(80,200,100,0.25); color:#44ee66; border:1px solid rgba(80,200,100,0.3); }
+.badge-prev   { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.45); border:1px solid rgba(255,255,255,0.1); }
+.ver-name { font-size:15px; font-weight:bold; flex:1; }
+.ver-date { font-size:10px; color:rgba(255,255,255,0.35); }
+.ver-body { padding:12px 16px; }
+.change-section { margin-bottom:10px; }
+.change-section:last-child { margin-bottom:0; }
+.section-label { font-size:9px; letter-spacing:.14em; font-weight:bold; margin-bottom:5px; display:flex; align-items:center; gap:5px; }
+.label-new { color:#44ee66; } .label-fix { color:#ffaa44; }
+.label-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.dot-new { background:#44ee66; } .dot-fix { background:#ffaa44; }
+.change-list { list-style:none; display:flex; flex-direction:column; gap:4px; }
+.change-item { font-size:11px; color:rgba(255,255,255,0.75); padding:5px 10px; border-radius:8px; background:rgba(255,255,255,0.04); display:flex; align-items:flex-start; gap:6px; line-height:1.5; }
+.change-icon { flex-shrink:0; }
+/* サブボタン */
+#sub-btns { display:flex; gap:8px; width:100%; max-width:260px; }
+.sub-btn { flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); font-size:12px; padding:10px 0; border-radius:20px; cursor:pointer; letter-spacing:.04em; -webkit-tap-highlight-color:transparent; }
+
 #combo-popup {
   position:fixed; top:28%; left:50%; transform:translateX(-50%);
   color:#ffdd44; font-size:26px; font-weight:bold;
@@ -211,8 +422,17 @@ canvas { display:block; }
 </head>
 <body>
 <div id="hud">
-  <div id="score-box"><div class="hud-label">スコア</div><div id="score-val">0</div></div>
-  <div id="timer-box"><div class="hud-label">残り時間</div><div id="timer-val">60</div></div>
+  <div id="hud-row1">
+    <div class="hud-box"><div class="hud-label">スコア</div><div id="score-val">0</div></div>
+    <div class="hud-box" id="timer-box"><div class="hud-label">残り時間</div><div id="timer-val">60</div></div>
+    <div class="hud-box"><div class="hud-label">撃破数</div><div id="kills-val">0</div></div>
+    <button id="pause-btn">⏸</button>
+  </div>
+  <div id="hp-row">
+    <span id="hp-icon">❤️</span>
+    <div id="hp-bar-wrap"><div id="hp-bar-fill" style="width:100%"></div></div>
+    <span id="hp-text">50 / 50</span>
+  </div>
 </div>
 <button id="cam-btn">📷 フリー</button>
 <div id="joystick-area">
@@ -224,7 +444,7 @@ canvas { display:block; }
   <div class="atk-btn" id="tongue-btn">👅<span class="atk-label">舌</span></div>
   <div id="btns-bottom">
     <div id="dash-btn-wrap">
-      <canvas id="dash-gauge" width="58" height="58"></canvas>
+      <canvas id="dash-gauge" width="64" height="64"></canvas>
       <div class="atk-btn" id="dash-btn">💨<span class="atk-label" id="dash-label">突進</span></div>
     </div>
     <div class="atk-btn" id="unchi-btn">💩<span class="atk-label">うんち</span></div>
@@ -243,10 +463,39 @@ canvas { display:block; }
   </div>
 </div>
 <div id="combo-popup"></div>
+<div id="pause-overlay">
+  <div id="pause-panel">
+    <div id="pause-header">
+      <span id="pause-dog">🐕</span>
+      <div id="pause-title">ポーズ</div>
+      <div id="pause-stats">
+        <div class="p-stat"><div class="p-stat-label">スコア</div><div class="p-stat-val" id="pause-score" style="color:#ffdd44">0</div></div>
+        <div class="p-stat"><div class="p-stat-label">撃破数</div><div class="p-stat-val" id="pause-kills" style="color:#88ddff">0体</div></div>
+        <div class="p-stat"><div class="p-stat-label">残りHP</div><div class="p-stat-val" id="pause-hp" style="color:#44ee66">50</div></div>
+      </div>
+    </div>
+    <div id="pause-btns">
+      <button class="p-btn" id="pause-resume-btn">▶ ゲームに戻る</button>
+      <button class="p-btn" id="pause-end-btn">⏹ ゲームを終了</button>
+    </div>
+  </div>
+</div>
+<div id="dmg-flash"  style="position:fixed;inset:0;pointer-events:none;z-index:35;background:rgba(255,0,0,0);transition:background .1s;"></div>
+<div id="reticle" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:25;">
+  <svg width="48" height="48" viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="2" fill="rgba(255,255,255,0.95)"/>
+    <line x1="24" y1="6" x2="24" y2="16" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="24" y1="32" x2="24" y2="42" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="6" y1="24" x2="16" y2="24" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="32" y1="24" x2="42" y2="24" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="24" cy="24" r="10" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
+  </svg>
+</div>
 <div id="laser-bar">
   <div id="laser-bar-label">☄️ 破壊光線発射中！</div>
   <div id="laser-bar-track"><div id="laser-bar-fill"></div></div>
 </div>
+<div id="result-overlay" style="display:none;position:fixed;inset:0;z-index:45;background:rgba(15,25,15,0.92);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;flex-direction:column;"></div>
 <div id="overlay">
   <!-- タイトル画面 -->
   <div id="title-screen">
@@ -258,21 +507,154 @@ canvas { display:block; }
     <div id="title-btns">
       <button id="start-btn">🐾 スタート！</button>
       <button id="rule-btn">📋 ルール</button>
+      <div id="sub-btns">
+        <button class="sub-btn" id="rn-btn">📝 リリースノート</button>
+      </div>
     </div>
-    <div id="version-tag">Beta 0.2.0</div>
+    <div id="version-tag">Beta 0.4.1</div>
   </div>
-  <!-- ルール画面 -->
-  <div id="rule-screen" style="display:none;">
-    <h2 id="rule-title">📋 ルール</h2>
-    <div id="rule-content">
-      <div class="rule-item">🕐 制限時間<span>60秒</span></div>
-      <div class="rule-item">💥 体当たり<span>+1点</span></div>
-      <div class="rule-item">👅 舌攻撃<span>顔の前方に発射</span></div>
-      <div class="rule-item">💩 うんち<span>おしりから放物線</span></div>
-      <div class="rule-item">💨 突進<span>1秒間超高速／5秒CD</span></div>
-      <div class="rule-item">📷 カメラ<span>フリー／TPS切替</span></div>
+  <!-- ルールブック画面 -->
+  <div id="rule-screen" class="full-screen">
+    <div class="fs-header">
+      <button class="fs-back" id="rule-back-btn">← 戻る</button>
+      <div><div class="fs-title">🐕 柴犬ダッシュ！</div><div class="fs-sub">ルールブック</div></div>
     </div>
-    <button id="rule-back-btn">← もどる</button>
+    <div class="fs-body" id="rule-content">
+      <div class="rb-section">
+        <div class="rb-section-title">基本ルール</div>
+        <div class="rb-card">
+          <div class="rb-row"><div class="rb-icon">🕐</div><div><div class="rb-label">制限時間</div><div class="rb-desc">60秒間、できるだけ多くの敵を倒そう！</div></div></div>
+          <div class="rb-row"><div class="rb-icon">❤️</div><div><div class="rb-label">HP <span class="rb-tag tag-new">NEW</span></div><div class="rb-desc">HP50からスタート。赤い敵に殴られると-5HP。0になるとゲームオーバー！</div></div></div>
+          <div class="rb-row"><div class="rb-icon">🏆</div><div><div class="rb-label">スコア計算</div><div class="rb-desc">撃破数×10点 ＋ 残りHP = 最終スコア</div></div></div>
+        </div>
+      </div>
+      <div class="rb-section">
+        <div class="rb-section-title">攻撃アクション</div>
+        <div class="rb-card">
+          <div class="rb-row"><div class="rb-icon">👅</div><div><div class="rb-label">舌攻撃</div><div class="rb-desc">口の前方に舌を発射。当たった敵をぶっ飛ばす</div></div></div>
+          <div class="rb-row"><div class="rb-icon">💩</div><div><div class="rb-label">うんち</div><div class="rb-desc">おしりから放物線。着地後に爆発して範囲内の全員をぶっ飛ばす！</div></div></div>
+          <div class="rb-row"><div class="rb-icon">💨</div><div><div class="rb-label">突進 <span class="rb-tag tag-cd">CD 5秒</span></div><div class="rb-desc">0.45秒間の高速移動。突進中の体当たりは超ノックバック！</div></div></div>
+        </div>
+      </div>
+      <div class="rb-section">
+        <div class="rb-section-title">敵の種類</div>
+        <div class="rb-card">
+          <div class="rb-row"><div class="rb-icon">🔵</div><div><div class="rb-label">通常の敵（青い服）</div><div class="rb-desc">フィールドをランダムに徘徊。当たるとぶっ飛ぶ</div></div></div>
+          <div class="rb-row"><div class="rb-icon">🔴</div><div><div class="rb-label">攻撃敵（赤い服）<span class="rb-tag tag-new">NEW</span></div><div class="rb-desc">約30%がスポーン。8m以内で追跡→1.5m以内でポコポコ攻撃（-5HP）</div></div></div>
+        </div>
+      </div>
+      <div class="rb-section">
+        <div class="rb-section-title">アイテム</div>
+        <div class="rb-card">
+          <div class="rb-row"><div class="rb-icon">🍖</div><div><div class="rb-label">ドッグフード缶 <span class="rb-tag tag-item">ITEM</span></div><div class="rb-desc">取得で☄️破壊光線に変化！5秒間発射できる</div></div></div>
+          <div class="rb-row"><div class="rb-icon">✨</div><div><div class="rb-label">金のうんち <span class="rb-tag tag-item">ITEM</span></div><div class="rb-desc">取得でうんちが金色化→超巨大爆発（範囲15m）</div></div></div>
+          <div class="rb-row"><div class="rb-icon">❤️</div><div><div class="rb-label">ハート <span class="rb-tag tag-new">NEW</span></div><div class="rb-desc">取得でHP+20回復！ピンチの時に活用しよう</div></div></div>
+        </div>
+      </div>
+      <div class="rb-section">
+        <div class="rb-section-title">カメラモード</div>
+        <div class="rb-card">
+          <div class="rb-row"><div class="rb-icon">📷</div><div><div class="rb-label">フリーカメラ</div><div class="rb-desc">右エリアをドラッグで自由に視点を回転</div></div></div>
+          <div class="rb-row"><div class="rb-icon">🎮</div><div><div class="rb-label">TPSカメラ</div><div class="rb-desc">犬の真後ろに固定追従</div></div></div>
+          <div class="rb-row"><div class="rb-icon">👁</div><div><div class="rb-label">FPSカメラ <span class="rb-tag tag-new">NEW</span></div><div class="rb-desc">犬の目線で完全一人称視点。中央にレティクル表示</div></div></div>
+        </div>
+      </div>
+      <div class="rb-section">
+        <div class="rb-section-title">スコア詳細</div>
+        <div class="rb-score-card">
+          <div class="rb-score-row"><span class="rb-score-label">敵1体撃破</span><span class="rb-score-val">+10点</span></div>
+          <div class="rb-score-row"><span class="rb-score-label">残りHP</span><span class="rb-score-val">そのまま加算</span></div>
+          <div class="rb-score-total">例）10体撃破 + 残りHP30 = <b style="color:#ffdd44">130点</b></div>
+        </div>
+      </div>
+      <div class="rb-section">
+        <div class="rb-section-title">攻略ヒント</div>
+        <div class="rb-tip">💡 <b>赤い敵は先手必勝！</b>近づかれる前に舌攻撃やうんちで倒そう</div>
+        <div class="rb-tip">💡 <b>ハートは積極的に取りに行こう。</b>HP管理がスコアに直結する</div>
+        <div class="rb-tip">💡 <b>突進でも赤い敵を一撃排除できる</b>（超ノックバック）</div>
+        <div class="rb-tip">💡 <b>破壊光線はバカゲー最強。</b>ドッグフード缶を見つけたら迷わず使おう</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- リリースノート画面 -->
+  <div id="rn-screen" class="full-screen">
+    <div class="fs-header">
+      <button class="fs-back" id="rn-back-btn">← 戻る</button>
+      <div><div class="fs-title">🐕 柴犬ダッシュ！</div><div class="fs-sub">リリースノート</div></div>
+    </div>
+    <div class="fs-body">
+      <div class="ver-card">
+        <div class="ver-header"><span class="ver-badge badge-latest">LATEST</span><span class="ver-name">Beta 0.4.1</span><span class="ver-date">2025年</span></div>
+        <div class="ver-body">
+          <div class="change-section">
+            <div class="section-label label-new"><span class="label-dot dot-new"></span>NEW</div>
+            <ul class="change-list">
+              <li class="change-item"><span class="change-icon">❤️</span>HP制度・ゲームオーバー画面を実装</li>
+              <li class="change-item"><span class="change-icon">👊</span>攻撃敵（赤い服）を追加。約30%でスポーン</li>
+              <li class="change-item"><span class="change-icon">❤️</span>ハートアイテムを追加（HP+20回復）</li>
+              <li class="change-item"><span class="change-icon">🏆</span>スコアと撃破数を分離表示</li>
+              <li class="change-item"><span class="change-icon">💀</span>ゲームオーバー画面を刷新（柴犬バウンドアニメ）</li>
+            </ul>
+          </div>
+          <div class="change-section">
+            <div class="section-label label-fix"><span class="label-dot dot-fix"></span>FIX</div>
+            <ul class="change-list">
+              <li class="change-item"><span class="change-icon">☄️</span>FPSモードでレーザーが見えなかった問題を修正</li>
+              <li class="change-item"><span class="change-icon">📷</span>カメラ切り替え中もレーザーが正常表示されるよう修正</li>
+              <li class="change-item"><span class="change-icon">🔧</span>突進ゲージのズレを修正</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="ver-card">
+        <div class="ver-header"><span class="ver-badge badge-prev">Beta 0.3.x</span><span class="ver-name"></span><span class="ver-date">2025年</span></div>
+        <div class="ver-body">
+          <div class="change-section">
+            <div class="section-label label-new"><span class="label-dot dot-new"></span>NEW</div>
+            <ul class="change-list">
+              <li class="change-item"><span class="change-icon">👁</span>FPSモード追加（フリー→TPS→FPSを巡回切替）</li>
+              <li class="change-item"><span class="change-icon">🚶</span>敵の移動AIを実装（自律的に徘徊）</li>
+              <li class="change-item"><span class="change-icon">🏠</span>リザルト画面にタイトルへ戻るボタンを追加</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="ver-card">
+        <div class="ver-header"><span class="ver-badge badge-prev">Beta 0.2.0</span><span class="ver-name"></span><span class="ver-date">2025年</span></div>
+        <div class="ver-body">
+          <div class="change-section">
+            <div class="section-label label-new"><span class="label-dot dot-new"></span>NEW</div>
+            <ul class="change-list">
+              <li class="change-item"><span class="change-icon">🍖</span>アイテムシステム実装（ドッグフード・金うんち）</li>
+              <li class="change-item"><span class="change-icon">☄️</span>破壊光線・金うんち超巨大爆発を実装</li>
+              <li class="change-item"><span class="change-icon">💥</span>爆発が範囲内の全員に命中するよう改善</li>
+            </ul>
+          </div>
+          <div class="change-section">
+            <div class="section-label label-fix"><span class="label-dot dot-fix"></span>FIX</div>
+            <ul class="change-list">
+              <li class="change-item"><span class="change-icon">🔧</span>touch操作の競合を解消</li>
+              <li class="change-item"><span class="change-icon">🐾</span>敵アニメが消える問題を修正</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="ver-card">
+        <div class="ver-header"><span class="ver-badge badge-prev">Beta 0.1.0</span><span class="ver-name"></span><span class="ver-date">2025年</span></div>
+        <div class="ver-body">
+          <div class="change-section">
+            <div class="section-label label-new"><span class="label-dot dot-new"></span>NEW</div>
+            <ul class="change-list">
+              <li class="change-item"><span class="change-icon">🐕</span>柴犬ダッシュ！初回リリース</li>
+              <li class="change-item"><span class="change-icon">🕹</span>丸ジョイスティック＋三角ボタン配置</li>
+              <li class="change-item"><span class="change-icon">📷</span>フリー・TPSカメラ切替</li>
+              <li class="change-item"><span class="change-icon">🌿</span>原っぱフィールドに6体無限湧き・60秒制限</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -483,6 +865,79 @@ function buildPin(){
   return g;
 }
 
+// ══ Build Attack Enemy（赤い服・30%で出現）════════
+function buildAttackPin(){
+  const g=new THREE.Group();
+  const S=1.5;
+  function eb(w,h,d,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.castShadow=true;m.receiveShadow=true;return m;}
+  function es(r,mat){const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),mat);m.castShadow=true;return m;}
+  const mHead=new THREE.MeshStandardMaterial({color:0xF5CBA7,roughness:0.75});
+  const mBody=new THREE.MeshStandardMaterial({color:0xcc2222,roughness:0.85}); // 赤
+  const mLeg =new THREE.MeshStandardMaterial({color:0x881111,roughness:0.85});
+  const mShoe=new THREE.MeshStandardMaterial({color:0x111008,roughness:0.9});
+  const mJoint=new THREE.MeshStandardMaterial({color:0xF5CBA7,roughness:0.75});
+
+  const headG=new THREE.Group(); headG.position.set(0,1.30*S,0); g.add(headG);
+  headG.add(es(0.24*S,mHead));
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.07*S,0.07*S,0.10*S,14),mJoint);
+  neck.position.set(0,1.12*S,0); g.add(neck);
+  const body=eb(0.46*S,0.52*S,0.26*S,mBody); body.position.set(0,0.82*S,0); g.add(body);
+
+  const aLG=new THREE.Group(); aLG.position.set(-0.29*S,1.04*S,0); g.add(aLG);
+  const aL=eb(0.18*S,0.46*S,0.18*S,mBody); aL.position.y=-0.23*S; aLG.add(aL);
+  const wL=es(0.09*S,mJoint); wL.position.y=-0.50*S; aLG.add(wL);
+
+  const aRG=new THREE.Group(); aRG.position.set(0.29*S,1.04*S,0); g.add(aRG);
+  const aR=eb(0.18*S,0.46*S,0.18*S,mBody); aR.position.y=-0.23*S; aRG.add(aR);
+  const wR=es(0.09*S,mJoint); wR.position.y=-0.50*S; aRG.add(wR);
+
+  const lLG=new THREE.Group(); lLG.position.set(-0.13*S,0.54*S,0); g.add(lLG);
+  const lL=eb(0.20*S,0.46*S,0.20*S,mLeg); lL.position.y=-0.23*S; lLG.add(lL);
+  const sL=eb(0.20*S,0.10*S,0.26*S,mShoe); sL.position.set(0,-0.50*S,0.03*S); lLG.add(sL);
+
+  const lRG=new THREE.Group(); lRG.position.set(0.13*S,0.54*S,0); g.add(lRG);
+  const lR=eb(0.20*S,0.46*S,0.20*S,mLeg); lR.position.y=-0.23*S; lRG.add(lR);
+  const sR=eb(0.20*S,0.10*S,0.26*S,mShoe); sR.position.set(0,-0.50*S,0.03*S); lRG.add(sR);
+
+  // ！マーク（追跡時に表示）
+  const angerG=new THREE.Group(); angerG.position.set(0.28*S,1.82*S,0); g.add(angerG);
+  const aMat=new THREE.MeshBasicMaterial({color:0xff2200});
+  const bar=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.26,0.04),aMat); bar.position.y=0.08; angerG.add(bar);
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),aMat); dot.position.y=-0.10; angerG.add(dot);
+  angerG.visible=false;
+
+  g.userData.armL=aLG; g.userData.armR=aRG;
+  g.userData.legL=lLG; g.userData.legR=lRG;
+  g.userData.headG=headG; g.userData.angerG=angerG;
+  g.userData.isAttacker=true;
+  g.userData.attackPhase=1; g.userData.attackTimer=0;
+  g.userData.aiState='wander'; // 'wander'|'chase'|'attack'
+  g.position.y=0.09*S;
+  return g;
+}
+
+// ══ Build Heart Item ════════════════════════════
+function buildHeartItem(){
+  const shape=new THREE.Shape();
+  const pts=[]; const N=64;
+  for(let i=0;i<=N;i++){
+    const t=(i/N)*Math.PI*2;
+    const x=16*Math.pow(Math.sin(t),3);
+    const y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
+    pts.push(new THREE.Vector2(x*0.042, y*0.042));
+  }
+  shape.setFromPoints(pts);
+  const geo=new THREE.ExtrudeGeometry(shape,{depth:0.28,bevelEnabled:true,bevelThickness:0.08,bevelSize:0.06,bevelSegments:4,curveSegments:24});
+  geo.computeBoundingBox();
+  const bb=geo.boundingBox;
+  const cx=(bb.min.x+bb.max.x)/2, cy=(bb.min.y+bb.max.y)/2, cz=(bb.min.z+bb.max.z)/2;
+  const mat=new THREE.MeshStandardMaterial({color:0xff1155,roughness:0.25,metalness:0.15,emissive:0xdd0033,emissiveIntensity:0.2});
+  const m=new THREE.Mesh(geo,mat); m.position.set(-cx,-cy,-cz);
+  const g=new THREE.Group(); g.add(m); g.castShadow=true;
+  g.userData.type='heart';
+  return g;
+}
+
 // ══ Build Items ════════════════════════════════════
 function buildDogFoodItem(){
   const g=new THREE.Group();
@@ -542,7 +997,8 @@ for(let i=0;i<80;i++){
 
 // ══ State ═════════════════════════════════════════
 let gameState='menu';
-let score=0,timeLeft=60,timerInterval=null;
+let score=0, kills=0, timeLeft=60, timerInterval=null;
+let hp=50, HP_MAX=50;
 
 const shiba=buildShiba();
 scene.add(shiba.root);
@@ -561,9 +1017,15 @@ const MAX_PINS=16;
 function spawnPin(){
   if(pins.length>=MAX_PINS) return;
   const a=Math.random()*Math.PI*2, r=5+Math.random()*(FIELD-6);
-  const pin=buildPin();
+  const isAttacker=Math.random()<0.30; // 30%が攻撃敵
+  const pin=isAttacker?buildAttackPin():buildPin();
   pin.position.set(Math.cos(a)*r,0,Math.sin(a)*r);
-  pin.userData={alive:true, fallVel:0, fallRot:0, blowX:0, blowZ:0, spin:0};
+  Object.assign(pin.userData,{
+    alive:true, fallVel:0, fallRot:0, blowX:0, blowZ:0, spin:0,
+    moveAngle:Math.random()*Math.PI*2, moveTimer:Math.random()*2,
+    isAttacker:!!isAttacker, aiState:'wander',
+    attackPhase:1, attackTimer:0, punchTimer:0,
+  });
   scene.add(pin); pins.push(pin);
 }
 
@@ -573,9 +1035,11 @@ const projectiles=[];
 function fireTongue(){
   if(gameState!=='playing') return;
   const fwd=forwardVec(SB.facing);
-  // 発射位置 = 柴犬の中心 + 前方0.9 + 高さ1.4（頭の位置）
-  const pos=SB.pos.clone().add(fwd.clone().multiplyScalar(0.9));
-  pos.y=1.35;
+  // FPS時は口の位置(高さ1.1, 前方0.5)、通常時は頭の前方
+  const mouthH = cameraMode==='fps' ? 1.1 : 1.35;
+  const mouthFwd = cameraMode==='fps' ? 0.5 : 0.9;
+  const pos=SB.pos.clone().add(fwd.clone().multiplyScalar(mouthFwd));
+  pos.y=mouthH;
   const mesh=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6),M.proj.clone());
   mesh.position.copy(pos);
   mesh.castShadow=true;
@@ -671,7 +1135,7 @@ function explodeUnchi(proj){
   },16);
 
   // 爆発範囲 半径5.0
-  const BLAST_R=2.6;
+  const BLAST_R=4.0;
   pins.forEach(pin=>{
     if(!pin.userData.alive) return;
     const dx=pin.position.x-ex.x;
@@ -689,7 +1153,7 @@ function explodeUnchi(proj){
 function knockPin(pin, fromX, fromZ, power){
   if(!pin.userData.alive) return false;
   pin.userData.alive=false;
-  score++; updateHUD(); showCombo('+1 🐾');
+  kills++; score+=10; updateHUD(); showCombo('+10 🐾');
 
   let dx=pin.position.x-fromX;
   let dz=pin.position.z-fromZ;
@@ -743,7 +1207,8 @@ window.addEventListener('touchend',e=>{
 
 // ══ Camera ════════════════════════════════════════
 let camYaw=0, camPitch=0.32, camDist=7.5;
-let tpsMode=false;
+let cameraMode='free'; // 'free'|'tps'|'fps'
+let tpsMode=false; // 後方互換用
 let camTouchId=null, camPX=0, camPY=0, camDrag=false;
 // TPSモード時の一時視点オフセット
 let tpsYawOffset=0, tpsPitchOffset=0;  // 指を離すと0に戻る
@@ -919,17 +1384,97 @@ window.addEventListener('keyup',  e=>keys[e.key]=false);
 // ══ HUD ═══════════════════════════════════════════
 function updateHUD(){
   document.getElementById('score-val').textContent=score;
+  document.getElementById('kills-val').textContent=kills;
   const tv=document.getElementById('timer-val');
   tv.textContent=timeLeft; tv.className=timeLeft<=10?'danger':'';
+  // HPバー更新
+  const pct=Math.max(0,hp/HP_MAX*100);
+  document.getElementById('hp-bar-fill').style.width=pct+'%';
+  document.getElementById('hp-text').textContent=hp+' / '+HP_MAX;
+  const fill=document.getElementById('hp-bar-fill');
+  if(hp>HP_MAX*0.5) fill.style.background='linear-gradient(90deg,#22cc44,#44ee66)';
+  else if(hp>HP_MAX*0.25) fill.style.background='linear-gradient(90deg,#ccaa00,#ffcc00)';
+  else fill.style.background='linear-gradient(90deg,#ff2200,#ff6600)';
 }
+
+function takeDamage(dmg){
+  if(gameState!=='playing') return;
+  hp=Math.max(0,hp-dmg);
+  updateHUD();
+  // ダメージフラッシュ
+  const flash=document.getElementById('dmg-flash');
+  if(flash){ flash.style.background='rgba(255,0,0,0.32)'; setTimeout(()=>flash.style.background='rgba(255,0,0,0)',200); }
+  if(hp<=0) gameOver();
+}
+
+function spawnGoStars(){
+  const emojis=['⭐','🐾','💥','✨'];
+  for(let i=0;i<8;i++){
+    setTimeout(()=>{
+      const s=document.createElement('div');
+      s.className='go-star';
+      s.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+      s.style.left=(15+Math.random()*70)+'%';
+      s.style.top=(25+Math.random()*45)+'%';
+      s.style.animationDelay=(Math.random()*0.3)+'s';
+      document.body.appendChild(s);
+      setTimeout(()=>s.remove(),2200);
+    },i*70);
+  }
+}
+
+function gameOver(){
+  clearInterval(timerInterval); timerInterval=null;
+  gameState='gameover';
+  const finalScore=score+hp;
+  const msg=finalScore>=150?'🏆 最強の柴犬！':finalScore>=80?'👏 なかなかやるね！':'💨 もっと頑張れ！';
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('result-overlay').style.display='none'; // タイトル画面を隠す
+  const ov=document.getElementById('result-overlay');
+  ov.style.display='flex';
+  ov.innerHTML=`
+    <div style="padding:20px 16px;text-align:center;max-width:340px;width:100%;">
+      <span class="go-x">✕</span>
+      <span class="go-dog">🐕</span>
+      <div class="go-title-txt">ゲームオーバー</div>
+      <div class="go-sub-txt">HPが尽きちゃった…！</div>
+      <div class="go-card">
+        <div class="go-card-label">FINAL SCORE</div>
+        <div class="go-final-score">${finalScore}</div>
+        <div class="go-score-unit">点</div>
+        <div class="go-stats">
+          <div class="go-stat">
+            <div class="go-stat-label">撃破数</div>
+            <div class="go-stat-val" style="color:#88ddff">${kills}<span style="font-size:10px;opacity:.6"> 体</span></div>
+          </div>
+          <div class="go-stat">
+            <div class="go-stat-label">残りHP</div>
+            <div class="go-stat-val" style="color:#44ee66">${hp}<span style="font-size:10px;opacity:.6"> HP</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="go-msg">${msg}</div>
+      <div class="go-btns">
+        <button class="go-btn-primary" onclick="spawnGoStars();startGame();">🔄 もう一度！</button>
+        <button class="go-btn-secondary" onclick="goTitle()">🏠 タイトルへ</button>
+      </div>
+      <div class="go-ver">Beta 0.4.1</div>
+    </div>
+  `;
+}
+let comboCount=0, comboTimer=null;
 function showCombo(txt){
   const el=document.getElementById('combo-popup');
-  el.textContent=txt; el.style.transition='none'; el.style.opacity='1';
+  comboCount++;
+  el.textContent= comboCount>1 ? `+${comboCount} 🐾` : txt;
+  el.style.transition='none'; el.style.opacity='1';
   el.style.transform='translateX(-50%) scale(1.3)';
-  setTimeout(()=>{
+  if(comboTimer) clearTimeout(comboTimer);
+  comboTimer=setTimeout(()=>{
     el.style.transition='opacity .5s,transform .5s';
     el.style.opacity='0'; el.style.transform='translateX(-50%) scale(0.9)';
-  },400);
+    comboTimer=null; comboCount=0;
+  },500);
 }
 
 // ══ Start / End ═══════════════════════════════════
@@ -942,15 +1487,25 @@ let itemTimer=10; // 最初は10秒後に出現
 
 // アイテムスポーン
 function spawnItem(){
-  const type=Math.random()<0.5?'food':'gold';
-  const mesh=type==='food'?buildDogFoodItem():buildGoldUnchiItem(1);
+  // food:gold:heart = 33%:33%:33%
+  const rnd=Math.random();
+  let type, mesh;
+  if(rnd<0.33){ type='food';  mesh=buildDogFoodItem(); }
+  else if(rnd<0.66){ type='gold'; mesh=buildGoldUnchiItem(1); }
+  else { type='heart'; mesh=buildHeartItem(); }
   const a=Math.random()*Math.PI*2, r=4+Math.random()*(FIELD-8);
   mesh.position.set(Math.cos(a)*r, 0, Math.sin(a)*r);
   mesh.userData={type, alive:true};
   scene.add(mesh); items.push(mesh);
 }
 
+// ハートアイテム出現タイマー（独立: 20秒±5秒）
+let heartTimer=15+Math.random()*10;
+
 // ── ドッグフードバフ（破壊光線）──
+// 破壊光線ゲージ要素（グローバルで定義）
+const laserBarEl=document.getElementById('laser-bar');
+const laserBarFill=document.getElementById('laser-bar-fill');
 let hasFoodBuff=false;
 let laserActive=false;
 let laserMesh=null;
@@ -971,53 +1526,46 @@ function fireLaser(){
   tongueBtn2.style.background='rgba(255,80,0,0.7)';
   tongueBtn2.style.borderColor='#ff4400';
 
-  // ビーム生成
-  // 正面=facing方向。rotation.y で向きを合わせ、X軸方向に伸ばす
-  const g=new THREE.Group();
-  const fwd=forwardVec(SB.facing);
-  // 発射位置: 犬の口元（前方0.6, 高さ1.35）
-  g.position.set(
-    shiba.root.position.x + fwd.x*0.6,
-    1.35,
-    shiba.root.position.z + fwd.z*0.6
-  );
-  // ビームをfacing方向に向ける
-  // CylinderはY軸方向なので、Z軸回転+Y軸回転で正面に向ける
-  g.rotation.y = -(SB.facing);
+  // ビーム生成（常にsceneの子 → カメラモード変更でも見える）
   const L=25;
-  // 太さを2倍: 0.07/0.20/0.48/0.92
+  const g=new THREE.Group();
+  const fwdL=forwardVec(SB.facing);
+  // 口元の位置（ワールド座標）
+  g.position.set(
+    shiba.root.position.x + fwdL.x*0.3,
+    1.1,
+    shiba.root.position.z + fwdL.z*0.3
+  );
+  // Quaternionでfacing方向に向ける（検証済み・全方向OK）
+  g.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0,1,0),
+    new THREE.Vector3(fwdL.x, 0, fwdL.z)
+  );
   [[0.07,0xffffff,1.0],[0.20,0xff2200,0.75],[0.48,0xff6600,0.35],[0.92,0xffaa00,0.10]]
   .forEach(([r,col,op])=>{
     const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,16),
       new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op}));
-    m.rotation.z=Math.PI/2; m.position.x=L/2; g.add(m);
+    m.position.set(0, L/2+0.4, 0);
+    g.add(m);
   });
-  const flash=new THREE.Mesh(new THREE.SphereGeometry(0.9,12,10),
+  const flash=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),
     new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1.0}));
+  flash.position.set(0, 0.5, 0);
   g.add(flash);
-  scene.add(g); laserMesh=g;
+  scene.add(g); // 常にsceneの直接の子
+  laserMesh=g;
 
-  // 範囲内の全ピン→超ぶっ飛ばし（power 350）
-  // cross < 3.0（太さ2倍に合わせた当たり範囲）
-  pins.forEach(pin=>{
-    if(!pin.userData.alive) return;
-    const dx=pin.position.x-shiba.root.position.x;
-    const dz=pin.position.z-shiba.root.position.z;
-    const dot=dx*fwd.x+dz*fwd.z;
-    const cross=Math.abs(dx*fwd.z-dz*fwd.x);
-    if(dot>0 && dot<L && cross<3.0) knockPin(pin,shiba.root.position.x,shiba.root.position.z,350);
-  });
-
-  laserBarEl.classList.add('active');
+    laserBarEl.classList.add('active');
   laserBarFill.style.width='100%';
   scene.background=new THREE.Color(0x220800);
   setTimeout(()=>scene.background=new THREE.Color(0x7ec898),180);
 }
-const laserBarEl=document.getElementById('laser-bar');
-const laserBarFill=document.getElementById('laser-bar-fill');
 function endLaser(){
   laserActive=false;
-  if(laserMesh){scene.remove(laserMesh);laserMesh=null;}
+  if(laserMesh){
+    scene.remove(laserMesh); // 常にsceneの子なのでscene.remove
+    laserMesh=null;
+  }
   tongueBtn2.innerHTML='👅<span class="atk-label">舌攻撃</span>';
   tongueBtn2.style.background=''; tongueBtn2.style.borderColor='';
   laserBarEl.classList.remove('active');
@@ -1039,7 +1587,7 @@ function fireGoldUnchi(){
   unchiBtn2.classList.remove('gold-mode');
   unchiBtn2.innerHTML='💩<span class="atk-label">うんち</span>';
   const back=forwardVec(SB.facing).multiplyScalar(-1);
-  const gu=buildGoldUnchiItem(3);
+  const gu=buildGoldUnchiItem(1.5);
   gu.position.set(shiba.root.position.x+back.x*0.7, 1.2, shiba.root.position.z+back.z*0.7);
   scene.add(gu);
   goldProjectiles.push({mesh:gu, vel:back.clone().multiplyScalar(8).add(new THREE.Vector3(0,4,0)), explodeTimer:3.0, exploded:false});
@@ -1140,16 +1688,23 @@ unchiBtn2.addEventListener('click', handleUnchiBtn);
 // カメラモード切替
 // カメラモード切替
 const camBtn=document.getElementById('cam-btn');
-camBtn.addEventListener('click',()=>{
-  tpsMode=!tpsMode;
-  camBtn.textContent=tpsMode?'📷 TPS':'📷 フリー';
-  camBtn.classList.toggle('tps',tpsMode);
-});
+const CAM_MODES=['free','tps','fps'];
+const CAM_LABELS={'free':'📷 フリー','tps':'📷 TPS','fps':'👁 FPS'};
+function cycleCamera(){
+  const idx=CAM_MODES.indexOf(cameraMode);
+  cameraMode=CAM_MODES[(idx+1)%3];
+  tpsMode=(cameraMode==='tps'||cameraMode==='fps');
+  camBtn.textContent=CAM_LABELS[cameraMode];
+  camBtn.className='';
+  if(cameraMode==='tps') camBtn.classList.add('cam-tps');
+  if(cameraMode==='fps') camBtn.classList.add('cam-fps');
+  // レティクル表示切替
+  document.getElementById('reticle').style.display=
+    cameraMode==='fps'?'block':'none';
+}
+camBtn.addEventListener('click', cycleCamera);
 camBtn.addEventListener('touchstart',e=>{
-  e.stopPropagation(); e.preventDefault();
-  tpsMode=!tpsMode;
-  camBtn.textContent=tpsMode?'📷 TPS':'📷 フリー';
-  camBtn.classList.toggle('tps',tpsMode);
+  e.stopPropagation(); e.preventDefault(); cycleCamera();
 },{passive:false});
 
 // ── 突進ボタン ──
@@ -1157,8 +1712,8 @@ const DASH_COOLDOWN = 5.0; // 5秒
 let dashCooldownLeft = 0;
 let dashActive = false;
 let dashVelX = 0, dashVelZ = 0;
-const DASH_SPEED = 220;
-const DASH_DURATION = 0.5;  // 突進持続時間(秒)
+const DASH_SPEED = 35;
+const DASH_DURATION = 0.45; // 突進持続時間(秒)
 let dashTimer = 0;
 
 const dashBtn  = document.getElementById('dash-btn');
@@ -1201,11 +1756,118 @@ dashBtn.style.borderColor='rgba(80,220,120,0.8)';
 dashBtn.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();doDash();},{passive:false});
 dashBtn.addEventListener('click', doDash);
 
+// ── ポーズ機能 ──
+let isPaused=false;
+const pauseOverlay=document.getElementById('pause-overlay');
+const pauseScoreEl=document.getElementById('pause-score');
+const pauseKillsEl=document.getElementById('pause-kills');
+const pauseHpEl=document.getElementById('pause-hp');
+
+function openPause(){
+  if(gameState!=='playing') return;
+  isPaused=true; gameState='paused';
+  clearInterval(timerInterval); timerInterval=null;
+  // 現在のスコア・撃破数・HPを表示
+  pauseScoreEl.textContent=score;
+  pauseKillsEl.textContent=kills+'体';
+  pauseHpEl.textContent=hp;
+  pauseOverlay.classList.add('open');
+}
+function closePause(){
+  if(gameState!=='paused') return;
+  isPaused=false; gameState='playing';
+  pauseOverlay.classList.remove('open');
+  // タイマー再開
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    updateHUD();
+    if(timeLeft<=0){ clearInterval(timerInterval); endGame(); }
+  },1000);
+}
+function endFromPause(){
+  pauseOverlay.classList.remove('open');
+  isPaused=false;
+  // その時点のスコアでリザルト画面へ
+  gameState='result';
+  clearInterval(timerInterval); timerInterval=null;
+  document.getElementById('overlay').style.display='none';
+  const ov=document.getElementById('result-overlay');
+  ov.style.display='flex';
+  const finalScore=score+hp;
+  const msg=finalScore>=150?'🏆 最強の柴犬！':finalScore>=80?'👏 なかなかやるね！':'💨 もっと走れ！';
+  ov.innerHTML=`
+    <div style="padding:20px 16px;text-align:center;max-width:340px;width:100%;">
+      <span class="go-dog">🐕</span>
+      <div class="go-title-txt" style="background:linear-gradient(135deg,#88ddff,#44aaff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ゲーム終了</div>
+      <div class="go-sub-txt">お疲れさまでした！</div>
+      <div class="go-card">
+        <div class="go-card-label">FINAL SCORE</div>
+        <div class="go-final-score">${finalScore}</div>
+        <div class="go-score-unit">点</div>
+        <div class="go-stats">
+          <div class="go-stat">
+            <div class="go-stat-label">撃破数</div>
+            <div class="go-stat-val" style="color:#88ddff">${kills}<span style="font-size:10px;opacity:.6"> 体</span></div>
+          </div>
+          <div class="go-stat">
+            <div class="go-stat-label">残りHP</div>
+            <div class="go-stat-val" style="color:#44ee66">${hp}<span style="font-size:10px;opacity:.6"> HP</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="go-msg">${msg}</div>
+      <div class="go-btns">
+        <button class="go-btn-primary" onclick="spawnGoStars();startGame();">🔄 もう一度！</button>
+        <button class="go-btn-secondary" onclick="goTitle()">🏠 タイトルへ</button>
+      </div>
+      <div class="go-ver">Beta 0.4.1</div>
+    </div>
+  `;
+}
+
+document.getElementById('pause-btn').addEventListener('click', openPause);
+document.getElementById('pause-btn').addEventListener('touchstart',e=>{
+  e.stopPropagation(); e.preventDefault(); openPause();
+},{passive:false});
+document.getElementById('pause-resume-btn').addEventListener('click', closePause);
+document.getElementById('pause-resume-btn').addEventListener('touchstart',e=>{
+  e.stopPropagation(); e.preventDefault(); closePause();
+},{passive:false});
+document.getElementById('pause-end-btn').addEventListener('click', endFromPause);
+document.getElementById('pause-end-btn').addEventListener('touchstart',e=>{
+  e.stopPropagation(); e.preventDefault(); endFromPause();
+},{passive:false});
+
+function goTitle(){
+  // ゲームを止めてタイトルに戻る
+  clearInterval(timerInterval); timerInterval=null;
+  gameState='title';
+  // result-overlayを隠してoverlayを表示
+  document.getElementById('result-overlay').style.display='none';
+  const ov=document.getElementById('overlay');
+  ov.style.display='flex';
+  document.getElementById('title-screen').style.display='block';
+  document.getElementById('rule-screen').classList.remove('open');
+  document.getElementById('rn-screen').classList.remove('open');
+  // レーザー・アイテムなどをクリーンアップ
+  if(laserMesh){shiba.root.remove(laserMesh);laserMesh=null;} laserActive=false;
+  items.forEach(m=>scene.remove(m)); items.length=0;
+  heartTimer=15+Math.random()*10;
+  goldProjectiles.forEach(p=>scene.remove(p.mesh)); goldProjectiles.length=0;
+  pins.forEach(p=>scene.remove(p)); pins.length=0;
+  
+}
+
 function startGame(){
   score=0; timeLeft=60; gameState='playing';
   SB.pos.set(0,0,0); SB.vel.set(0,0,0); SB.facing=0;
   dashCooldownLeft=0; dashActive=false; dashBtn.classList.remove('cooldown');
+  comboCount=0;
+  // HP・スコアリセット
+  hp=HP_MAX; kills=0; score=0;
+  updateHUD();
   // アイテムリセット
+  pins.forEach(p=>{p.userData.moveAngle=Math.random()*Math.PI*2; p.userData.moveTimer=Math.random()*3;});
   items.forEach(m=>scene.remove(m)); items.length=0;
   goldProjectiles.forEach(p=>scene.remove(p.mesh)); goldProjectiles.length=0;
   goldExplosions.forEach(e=>e.objs.forEach(o=>{if(o.m.parent)scene.remove(o.m);})); goldExplosions.length=0;
@@ -1229,29 +1891,59 @@ function startGame(){
 }
 function endGame(){
   gameState='end'; clearInterval(timerInterval);
-  const ov=document.getElementById('overlay');
+  document.getElementById('overlay').style.display='none';
+  const ov=document.getElementById('result-overlay');
+  ov.style.display='flex';
+  const finalScore=score+hp;
+  const msg=finalScore>=150?'🏆 最強の柴犬！':finalScore>=80?'👏 なかなかやるね！':'💨 もっと走れ！';
   ov.innerHTML=`
-    <div style="padding:28px 20px;text-align:center;max-width:320px;">
-      <div style="font-size:48px;margin-bottom:8px;">🐕</div>
-      <h1 style="font-size:26px;margin-bottom:6px;">タイムアップ！</h1>
-      <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px;">倒したピンの数</div>
-      <div class="final-score">${score} 本</div>
-      <div style="font-size:15px;color:#ffaa44;margin-bottom:28px;">${score>=30?'最強の柴犬！🏆':score>=15?'なかなかやるね！👏':'もっと走れ！💨'}</div>
-      <button onclick="startGame()" style="background:linear-gradient(135deg,#c86020,#e88030);border:none;color:#fff;font-size:17px;font-weight:bold;padding:13px 40px;border-radius:28px;cursor:pointer;letter-spacing:.06em;">🔄 もう一度！</button>
-      <div style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.25);">Beta 0.2.0</div>
+    <div style="padding:20px 16px;text-align:center;max-width:340px;width:100%;">
+      <span class="go-dog">🐕</span>
+      <div class="go-title-txt" style="background:linear-gradient(135deg,#ffdd44,#ff8844);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">タイムアップ！</div>
+      <div class="go-sub-txt">60秒間よく頑張った！</div>
+      <div class="go-card">
+        <div class="go-card-label">FINAL SCORE</div>
+        <div class="go-final-score">${finalScore}</div>
+        <div class="go-score-unit">点</div>
+        <div class="go-stats">
+          <div class="go-stat">
+            <div class="go-stat-label">撃破数</div>
+            <div class="go-stat-val" style="color:#88ddff">${kills}<span style="font-size:10px;opacity:.6"> 体</span></div>
+          </div>
+          <div class="go-stat">
+            <div class="go-stat-label">残りHP</div>
+            <div class="go-stat-val" style="color:#44ee66">${hp}<span style="font-size:10px;opacity:.6"> HP</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="go-msg">${msg}</div>
+      <div class="go-btns">
+        <button class="go-btn-primary" onclick="spawnGoStars();startGame();">🔄 もう一度！</button>
+        <button class="go-btn-secondary" onclick="goTitle()">🏠 タイトルへ</button>
+      </div>
+      <div class="go-ver">Beta 0.4.1</div>
     </div>
   `;
   ov.style.display='flex';
 }
 document.getElementById('start-btn').addEventListener('click',startGame);
-document.getElementById('rule-btn').addEventListener('click',()=>{
-  document.getElementById('title-screen').style.display='none';
-  document.getElementById('rule-screen').style.display='block';
-});
-document.getElementById('rule-back-btn').addEventListener('click',()=>{
-  document.getElementById('rule-screen').style.display='none';
-  document.getElementById('title-screen').style.display='block';
-});
+// ルール・リリースノート画面の開閉
+function openFsScreen(id){
+  const el=document.getElementById(id);
+  el.classList.add('open');
+  el.scrollTop=0; // 開くたびに先頭に戻す
+}
+function closeFsScreen(id){
+  document.getElementById(id).classList.remove('open');
+}
+document.getElementById('rule-btn').addEventListener('click',()=>openFsScreen('rule-screen'));
+document.getElementById('rule-btn').addEventListener('touchstart',e=>{e.stopPropagation();e.preventDefault();openFsScreen('rule-screen');},{passive:false});
+document.getElementById('rule-back-btn').addEventListener('click',()=>closeFsScreen('rule-screen'));
+document.getElementById('rule-back-btn').addEventListener('touchstart',e=>{e.stopPropagation();e.preventDefault();closeFsScreen('rule-screen');},{passive:false});
+document.getElementById('rn-btn').addEventListener('click',()=>openFsScreen('rn-screen'));
+document.getElementById('rn-btn').addEventListener('touchstart',e=>{e.stopPropagation();e.preventDefault();openFsScreen('rn-screen');},{passive:false});
+document.getElementById('rn-back-btn').addEventListener('click',()=>closeFsScreen('rn-screen'));
+document.getElementById('rn-back-btn').addEventListener('touchstart',e=>{e.stopPropagation();e.preventDefault();closeFsScreen('rn-screen');},{passive:false});
 
 // ══ Main Loop ═════════════════════════════════════
 const clock=new THREE.Clock();
@@ -1260,7 +1952,7 @@ function animate(){
   const dt=Math.min(clock.getDelta(),0.05);
   const t=clock.elapsedTime;
 
-  if(gameState==='playing'){
+  if(gameState==='playing' && !isPaused){
     // 入力取得（jy<0=上=前）
     let jx=joyState.dx, jy=joyState.dy;
     if(keys['ArrowUp']||keys['w'])    jy=-1;
@@ -1337,7 +2029,9 @@ function animate(){
 
     shiba.root.position.x=SB.pos.x;
     shiba.root.position.z=SB.pos.z;
-    shiba.root.rotation.y=SB.facing; // ★補正なし
+    shiba.root.rotation.y=SB.facing;
+  // FPSモード時は犬の体を非表示（自分の体が邪魔にならないよう）
+  shiba.root.visible=(cameraMode!=='fps'); // ★補正なし
 
     // 走りアニメ
     const spd=SB.vel.length();
@@ -1348,14 +2042,7 @@ function animate(){
     shiba.bodyG.position.y=0.75+Math.abs(Math.sin(SB.legPhase))*spd/SB.speed*0.06;
     shiba.tailG.rotation.z=Math.sin(t*3.5)*0.28+spd*0.05;
 
-    // 敵の歩きアニメ
-    const walkPhase=Math.sin(t*3)*0.32;
-    pins.forEach(pin=>{
-      if(pin.userData.armL) pin.userData.armL.rotation.x= walkPhase;
-      if(pin.userData.armR) pin.userData.armR.rotation.x=-walkPhase;
-      if(pin.userData.legL) pin.userData.legL.rotation.x=-walkPhase;
-      if(pin.userData.legR) pin.userData.legR.rotation.x= walkPhase;
-    });
+// 歩きアニメは敵AIループ内で統合
 
     // ピン処理
     pins.forEach(pin=>{
@@ -1437,6 +2124,106 @@ function animate(){
       itemTimer=ITEM_SPAWN_INTERVAL+(Math.random()*10-5);
     }
 
+    // ── 敵の移動AI ──
+    const WINDUP=0.28, STRIKE=0.10, REST=0.10;
+    const walkPhase=Math.sin(t*3)*0.32;
+    pins.forEach(pin=>{
+      if(!pin.userData.alive) return;
+
+      // 通常歩きアニメ
+      if(pin.userData.armL){ pin.userData.armL.rotation.x= walkPhase; }
+      if(pin.userData.armR){ pin.userData.armR.rotation.x=-walkPhase; }
+      if(pin.userData.legL){ pin.userData.legL.rotation.x=-walkPhase; }
+      if(pin.userData.legR){ pin.userData.legR.rotation.x= walkPhase; }
+
+      const toDogX=SB.pos.x-pin.position.x;
+      const toDogZ=SB.pos.z-pin.position.z;
+      const distToDog=Math.sqrt(toDogX*toDogX+toDogZ*toDogZ);
+      const toDogAngle=Math.atan2(toDogX,toDogZ);
+
+      if(pin.userData.isAttacker){
+        // ── 攻撃敵のAI ──
+        const state=pin.userData.aiState;
+        if(distToDog<1.5){
+          // 攻撃レンジ
+          pin.userData.aiState='attack';
+          if(pin.userData.angerG) pin.userData.angerG.visible=true;
+          pin.userData.attackTimer=(pin.userData.attackTimer||0)+dt;
+          // ポコポコモーション
+          const ph=pin.userData.attackPhase||1;
+          const at=pin.userData.attackTimer;
+          const UP=-Math.PI, DOWN=-Math.PI/2;
+          if(ph===1){
+            const p=Math.min(at/WINDUP,1), e=p*p;
+            if(pin.userData.armR) pin.userData.armR.rotation.x=DOWN+(UP-DOWN)*e;
+            if(at>=WINDUP){pin.userData.attackPhase=2;pin.userData.attackTimer=0;}
+          } else if(ph===2){
+            const p=Math.min(at/STRIKE,1), e=1-(1-p)**3;
+            if(pin.userData.armR) pin.userData.armR.rotation.x=UP+(DOWN-UP)*e;
+            if(p>0.85) takeDamage(5); // ダメージ
+            if(at>=STRIKE){pin.userData.attackPhase=3;pin.userData.attackTimer=0;}
+          } else if(ph===3){
+            if(pin.userData.armR) pin.userData.armR.rotation.x=DOWN;
+            if(at>=REST){pin.userData.attackPhase=4;pin.userData.attackTimer=0;}
+          } else if(ph===4){
+            const p=Math.min(at/WINDUP,1), e=p*p;
+            if(pin.userData.armL) pin.userData.armL.rotation.x=DOWN+(UP-DOWN)*e;
+            if(at>=WINDUP){pin.userData.attackPhase=5;pin.userData.attackTimer=0;}
+          } else if(ph===5){
+            const p=Math.min(at/STRIKE,1), e=1-(1-p)**3;
+            if(pin.userData.armL) pin.userData.armL.rotation.x=UP+(DOWN-UP)*e;
+            if(p>0.85) takeDamage(5);
+            if(at>=STRIKE){pin.userData.attackPhase=6;pin.userData.attackTimer=0;}
+          } else {
+            if(pin.userData.armL) pin.userData.armL.rotation.x=DOWN;
+            if(at>=REST){pin.userData.attackPhase=1;pin.userData.attackTimer=0;}
+          }
+        } else if(distToDog<8){
+          // 追跡
+          pin.userData.aiState='chase';
+          if(pin.userData.angerG) pin.userData.angerG.visible=true;
+          pin.userData.moveAngle=toDogAngle;
+          // ！マーク揺れ
+          if(pin.userData.angerG){
+            pin.userData.angerG.rotation.z=Math.sin(t*14)*0.18;
+            pin.userData.angerG.position.y=(1.82+Math.sin(t*9)*0.04)*1.5;
+          }
+        } else {
+          // 徘徊
+          pin.userData.aiState='wander';
+          if(pin.userData.angerG) pin.userData.angerG.visible=false;
+          pin.userData.moveTimer=(pin.userData.moveTimer||0)-dt;
+          if(pin.userData.moveTimer<=0){
+            pin.userData.moveAngle=Math.random()*Math.PI*2;
+            pin.userData.moveTimer=2+Math.random()*3;
+          }
+        }
+        // 攻撃中以外は移動
+        if(pin.userData.aiState!=='attack'){
+          const spd=pin.userData.aiState==='chase'?2.8:1.8;
+          const nx=pin.position.x+Math.sin(pin.userData.moveAngle)*spd*dt;
+          const nz=pin.position.z+Math.cos(pin.userData.moveAngle)*spd*dt;
+          if(Math.sqrt(nx*nx+nz*nz)<FIELD-1){ pin.position.x=nx; pin.position.z=nz; }
+          else { pin.userData.moveAngle+=Math.PI; }
+          pin.rotation.y=pin.userData.moveAngle+Math.PI;
+        }
+      } else {
+        // ── 通常敵のAI ──
+        pin.userData.moveTimer=(pin.userData.moveTimer||0)-dt;
+        if(pin.userData.moveTimer<=0){
+          pin.userData.moveAngle=Math.random()<0.3
+            ?toDogAngle+(Math.random()-0.5)*0.8
+            :Math.random()*Math.PI*2;
+          pin.userData.moveTimer=1.5+Math.random()*2.5;
+        }
+        const nx=pin.position.x+Math.sin(pin.userData.moveAngle)*1.8*dt;
+        const nz=pin.position.z+Math.cos(pin.userData.moveAngle)*1.8*dt;
+        if(Math.sqrt(nx*nx+nz*nz)<FIELD-1){ pin.position.x=nx; pin.position.z=nz; }
+        else { pin.userData.moveAngle+=Math.PI+(Math.random()-0.5)*0.5; pin.userData.moveTimer=0; }
+        pin.rotation.y=pin.userData.moveAngle+Math.PI;
+      }
+    });
+
     // ── アイテム浮遊・取得判定 ──
     for(let i=items.length-1;i>=0;i--){
       const item=items[i];
@@ -1447,9 +2234,15 @@ function animate(){
       if(Math.sqrt(dx*dx+dz*dz)<1.0){
         item.userData.alive=false;
         scene.remove(item); items.splice(i,1);
-        if(item.userData.type==='food') activateFoodBuff();
-        else activateGoldBuff();
-        showCombo(item.userData.type==='food'?'🍖 破壊光線GET!':'✨ 金うんちGET!');
+        if(item.userData.type==='food'){
+          activateFoodBuff(); showCombo('🍖 破壊光線GET!');
+        } else if(item.userData.type==='gold'){
+          activateGoldBuff(); showCombo('✨ 金うんちGET!');
+        } else if(item.userData.type==='heart'){
+          hp=Math.min(HP_MAX,hp+20);
+          updateHUD();
+          showCombo('❤️ HP +20!');
+        }
       }
     }
 
@@ -1458,18 +2251,32 @@ function animate(){
       laserLife-=dt;
       // ゲージ更新
       if(laserBarFill) laserBarFill.style.width=(laserLife/LASER_DURATION*100)+'%';
-      // ビームの向きを犬の正面に追従
+      // レーザー追従（常にsceneの子→毎フレームワールド座標更新）
       const fwdL=forwardVec(SB.facing);
       laserMesh.position.set(
-        shiba.root.position.x+fwdL.x*0.6,
-        1.35,
-        shiba.root.position.z+fwdL.z*0.6
+        shiba.root.position.x + fwdL.x*0.3,
+        1.1,
+        shiba.root.position.z + fwdL.z*0.3
       );
-      laserMesh.rotation.y=-SB.facing;
+      laserMesh.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0,1,0),
+        new THREE.Vector3(fwdL.x, 0, fwdL.z)
+      );
+      // 当たり判定
+      pins.forEach(pin=>{
+        if(!pin.userData.alive) return;
+        const dx=pin.position.x-shiba.root.position.x;
+        const dz=pin.position.z-shiba.root.position.z;
+        const dot  = dx*fwdL.x + dz*fwdL.z;
+        const cross= Math.abs(dx*fwdL.z - dz*fwdL.x);
+        if(dot>0 && dot<25 && cross<1.2)
+          knockPin(pin,shiba.root.position.x,shiba.root.position.z,350);
+      });
+
       // 脈動
       const pulse=1+Math.sin(t*35)*0.06;
       laserMesh.children.forEach((c,ci)=>{
-        if(ci>0 && c.scale) c.scale.set(1,pulse,pulse);
+        if(c.scale && ci<4) c.scale.set(pulse,1,pulse);
       });
       if(laserLife<=0) endLaser();
     }
@@ -1522,18 +2329,39 @@ function animate(){
 
   // ── カメラ追従 ──
   const tx=shiba.root.position.x, tz=shiba.root.position.z;
-  if(tpsMode){
-    // TPSモード: 犬の真後ろ固定追従 + 一時視点オフセット
-    // 指を離したらオフセットを自然に0へ戻す（lerp）
+  if(cameraMode==='fps'){
+    // ── FPSモード: 犬の目の位置に配置、真正面を向く ──
+    const fwdF=forwardVec(SB.facing);
+    // 目の位置: 犬の中心から前方0.25、高さ1.35
+    const eyeX=tx + fwdF.x*0.25;
+    const eyeZ=tz + fwdF.z*0.25;
+    const eyeY=SB.pos.y + 1.35;
+    camera.position.set(eyeX, eyeY, eyeZ);
+    // ドラッグで上下左右に視点変更（指離すと戻る）
     if(!tpsDragging){
-      tpsYawOffset  *= 0.88; // 自然に戻る速度
+      tpsYawOffset  *= 0.88;
       tpsPitchOffset*= 0.88;
       if(Math.abs(tpsYawOffset)<0.001)   tpsYawOffset=0;
       if(Math.abs(tpsPitchOffset)<0.001) tpsPitchOffset=0;
     }
-    // 合成Yaw/Pitch（facing + オフセット）
+    const fpsYaw  = SB.facing + tpsYawOffset;
+    const fpsPitch= Math.max(-0.5, Math.min(0.5, tpsPitchOffset));
+    // 視線の先: 前方10m
+    const lookX=eyeX + Math.sin(fpsYaw)*10;
+    const lookY=eyeY + Math.sin(fpsPitch)*5;
+    const lookZ=eyeZ + Math.cos(fpsYaw)*10;
+    camera.lookAt(lookX, lookY, lookZ);
+    camYaw=SB.facing;
+  } else if(cameraMode==='tps'){
+    // ── TPSモード: 犬の真後ろ固定追従 ──
+    if(!tpsDragging){
+      tpsYawOffset  *= 0.88;
+      tpsPitchOffset*= 0.88;
+      if(Math.abs(tpsYawOffset)<0.001)   tpsYawOffset=0;
+      if(Math.abs(tpsPitchOffset)<0.001) tpsPitchOffset=0;
+    }
     const totalYaw   = SB.facing + tpsYawOffset;
-    const totalPitch = 0.32 + tpsPitchOffset; // 基本仰角0.32（低め・前が見やすい）
+    const totalPitch = 0.32 + tpsPitchOffset;
     const tpsDist=camDist*0.7;
     const behindX=tx - Math.sin(totalYaw)*tpsDist*Math.cos(totalPitch);
     const behindZ=tz - Math.cos(totalYaw)*tpsDist*Math.cos(totalPitch);
@@ -1542,10 +2370,9 @@ function animate(){
     camera.position.y+=(behindY-camera.position.y)*0.10;
     camera.position.z+=(behindZ-camera.position.z)*0.10;
     camera.lookAt(tx,1.0,tz);
-    // フリーモードに戻ったとき用にcamYawを同期
     camYaw=SB.facing;
   } else {
-    // フリーモード: 従来のカメラ
+    // ── フリーモード: 従来のカメラ ──
     const cx=tx - Math.sin(camYaw)*camDist*Math.cos(camPitch);
     const cy=camDist*Math.sin(camPitch)+0.8;
     const cz=tz - Math.cos(camYaw)*camDist*Math.cos(camPitch);
